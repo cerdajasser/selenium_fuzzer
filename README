@@ -1,123 +1,143 @@
-Installation and Usage Instructions for Selenium Fuzzer
+**Installation and Usage Instructions for Selenium Fuzzer**
 
-1. Installation Instructions
+---
 
-Step 1: Clone the Repository
+### **1. Installation Instructions**
+
+#### **Step 1: Clone the Repository**
 
 First, clone the repository to your local machine:
 
+```bash
 $ git clone https://github.com/cerdajasser/selenium_fuzzer.git
 $ cd selenium_fuzzer
+```
 
-Step 2: Create a Virtual Environment
+#### **Step 2: Create a Virtual Environment**
 
 Creating a virtual environment helps to keep dependencies isolated:
 
+```bash
 $ python3 -m venv venv
+```
 
 Activate the virtual environment:
 
-On Linux/macOS:
+- On Linux/macOS:
+  
+  ```bash
+  $ source venv/bin/activate
+  ```
 
-$ source venv/bin/activate
+- On Windows:
 
-On Windows:
+  ```bash
+  $ venv\Scripts\activate
+  ```
 
-$ venv\Scripts\activate
+#### **Step 3: Install Dependencies**
 
-Step 3: Install Dependencies
+Install the required dependencies listed in `requirements.txt`:
 
-Install the required dependencies listed in requirements.txt:
-
+```bash
 $ pip install -r requirements.txt
+```
 
-Make sure you have the correct version of Chrome installed and that you have downloaded the compatible chromedriver. Ensure the chromedriver executable is available in your PATH or specify its path in the configuration (config.py).
+Make sure you have the correct version of Chrome installed and that you have downloaded the compatible `chromedriver`. Ensure the `chromedriver` executable is available in your `PATH` or specify its path in the configuration (`config.py`).
 
-2. Configuration
+### **2. Configuration**
 
-ChromeDriver Path: Set the CHROMEDRIVER_PATH in selenium_fuzzer/config.py to the path where your chromedriver is located.
+- **ChromeDriver Path**: Set the `CHROMEDRIVER_PATH` in `selenium_fuzzer/config.py` to the path where your `chromedriver` is located.
+- **Environment Variables**: Optionally, you can set environment variables for configurations, like `LOG_LEVEL`, `SELENIUM_HEADLESS`, etc.
 
-Environment Variables: Optionally, you can set environment variables for configurations, like LOG_LEVEL, SELENIUM_HEADLESS, etc.
-
-3. Running the Fuzzer
+### **3. Running the Fuzzer**
 
 After configuring everything, you can run the fuzzer using the main script.
 
-Step 1: Run the Main Script
+#### **Step 1: Run the Main Script**
 
-Run the fuzzer by executing the main.py script:
+Run the fuzzer by executing the `main.py` script:
 
+```bash
 $ python main.py
+```
 
 You will be prompted to enter the URL to fuzz:
 
+```plaintext
 Enter the URL to fuzz: http://example.com
+```
 
 The fuzzer will analyze the input fields on the provided URL and allow you to select which fields to fuzz.
 
-4. Running Tests
+### **4. Running Tests**
 
-To verify the functionality of the fuzzer, run the unit tests provided in the tests/ directory:
+To verify the functionality of the fuzzer, run the unit tests provided in the `tests/` directory:
 
+```bash
 $ python -m unittest discover tests
+```
 
 This command will run all the unit tests to ensure that the different components of the fuzzer work correctly.
 
-5. Usage Overview
+### **5. Usage Overview**
 
-Interactive Fuzzing: The fuzzer lists all available input fields within mat-form-field components on the provided web page. You can then select which field to fuzz.
+- **Interactive Fuzzing**: The fuzzer lists all available input fields within `mat-form-field` components on the provided web page. You can then select which field to fuzz.
+- **Clickable Element Testing**: After fuzzing input fields, the fuzzer will proceed to click on detected clickable elements (e.g., buttons, links) and analyze the page for errors.
+- **Logging**: Logs are saved in a file named `selenium_fuzzer.log`. The logging level can be configured in the `config.py` file or by setting an environment variable (`LOG_LEVEL`).
+- **Screenshots**: When errors occur during fuzzing or clicking actions, screenshots are saved in the project directory with filenames indicating the error.
 
-Logging: Logs are saved in a file named selenium_fuzzer.log. The logging level can be configured in the config.py file or by setting an environment variable (LOG_LEVEL).
+### **6. Notes on Dependencies**
 
-Screenshots: When errors occur during fuzzing, screenshots are saved in the project directory with filenames indicating the error.
+- The script depends on `selenium` for web automation. Make sure you have the correct version installed.
+- The project uses a headless browser configuration by default for performance. If you want to see the browser while the fuzzer runs, set `SELENIUM_HEADLESS = False` in the configuration.
 
-6. Notes on Dependencies
+### **7. Example Workflow**
 
-The script depends on selenium for web automation. Make sure you have the correct version installed.
+1. **Activate Virtual Environment**:
 
-The project uses a headless browser configuration by default for performance. If you want to see the browser while the fuzzer runs, set SELENIUM_HEADLESS = False in the configuration.
+   ```bash
+   $ source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-7. Example Workflow
+2. **Run the Fuzzer**:
 
-Activate Virtual Environment:
+   ```bash
+   $ python main.py
+   ```
 
-$ source venv/bin/activate  # On Windows: venv\Scripts\activate
+3. **Follow Prompts**:
 
-Run the Fuzzer:
+   - Enter the URL to test.
+   - Select the input fields for fuzzing.
+   - Observe the clickable elements being tested.
 
-$ python main.py
+4. **Review Logs and Screenshots**:
 
-Follow Prompts:
+   - Check `selenium_fuzzer.log` for detailed logs.
+   - Look at the screenshots saved in the directory if errors are encountered.
 
-Enter the URL to test.
+### **8. Troubleshooting**
 
-Select the input fields for fuzzing.
+- **ChromeDriver Issues**: Ensure that the version of `chromedriver` matches the version of Chrome you have installed.
+- **Element Not Found**: If input fields or clickable elements are not found, ensure that the webpage is fully loaded and visible elements are present.
+- **Virtual Environment Issues**: Make sure you have activated the virtual environment before running the script.
 
-Review Logs and Screenshots:
-
-Check selenium_fuzzer.log for detailed logs.
-
-Look at the screenshots saved in the directory if errors are encountered.
-
-8. Troubleshooting
-
-ChromeDriver Issues: Ensure that the version of chromedriver matches the version of Chrome you have installed.
-
-Element Not Found: If input fields are not found, ensure that the webpage is fully loaded and visible elements are present.
-
-Virtual Environment Issues: Make sure you have activated the virtual environment before running the script.
-
-9. Uninstalling
+### **9. Uninstalling**
 
 To uninstall the project, simply deactivate the virtual environment and remove the project folder:
 
+```bash
 $ deactivate  # Deactivate the virtual environment
 $ cd ..
 $ rm -rf selenium_fuzzer  # Delete the project folder
+```
 
-10. Contact
+### **10. Contact**
 
-For any issues or questions, feel free to create an issue on the GitHub repository or contact the author via email: cerdajasser@gmail.com
+For any issues or questions, feel free to create an issue on the GitHub repository or contact the author via email: your.email@example.com.
 
-Happy fuzzing! Ensure you only test on websites you have permission to test, as unauthorized testing may be illegal.
+---
+
+**Happy fuzzing!** Ensure you only test on websites you have permission to test, as unauthorized testing may be illegal.
 

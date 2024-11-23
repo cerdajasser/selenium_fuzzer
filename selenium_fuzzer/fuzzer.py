@@ -6,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException
 from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
 from selenium_fuzzer.logger import get_logger
@@ -48,74 +49,49 @@ class Fuzzer:
 
             return inputs
 
-        except Exception as e:
-            logger.error(f"Error detecting inputs: {e}")
+        except TimeoutException as e:
+            logger.error(f"Timeout while detecting inputs: {e}")
             self.driver.save_screenshot('error_detecting_inputs.png')
             raise
 
-    def unhide_field(self, input_element: WebElement) -> None:
-        """Attempt to unhide the field if it's not displayed."""
+    def detect_clickable_elements(self) -> List[WebElement]:
+        """Detect clickable elements on the page."""
         try:
-            # Adjust the selector to match your application's unhide element
-            unhide_element = self.driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Search"]')
-            unhide_element.click()
-            time.sleep(1)
+            clickable_elements = self.driver.find_elements(By.XPATH, "//a | //button | //*[@onclick]")
+            logger.info(f"Detected {len(clickable_elements)} clickable elements.")
+            return clickable_elements
         except Exception as e:
-            logger.error(f"Error unhiding the field: {e}")
-            self.driver.save_screenshot('unhide_field_error.png')
-            raise ElementNotInteractableError(f"Cannot unhide the field: {e}")
+            logger.error(f"Error detecting clickable elements: {e}")
+            return []
 
-    def fuzz_field(self, input_element: WebElement, input_name: str, delay: int) -> None:
-        """Fuzz a single input field."""
-        payloads = generate_safe_payloads()
+    def click_element(self, element: WebElement) -> None:
+        """Click an element and analyze the page for errors."""
+        try:
+            # Scroll into view and click the element
+            scroll_into_view(self.driver, element)
+            WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable(element))
+            element.click()
+            logger.info(f"Clicked element: {element.tag_name} with text: {element.text}")
 
-        for payload in payloads:
-            try:
-                if not input_element.is_displayed():
-                    logger.info(f"Field {input_name} is not displayed. Attempting to unhide it.")
-                    self.unhide_field(input_element)
-                    WebDriverWait(self.driver, 20).until(EC.visibility_of(input_element))
+            # Analyze the page response after clicking
+            self.analyze_response()
 
-                scroll_into_view(self.driver, input_element)
-                WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.XPATH, self.get_xpath(input_element))))
-
-                input_element.clear()
-                input_element.send_keys(payload)
-                logger.info(f"Fuzzing Field: {input_name}, Payload: {payload}")
-                time.sleep(delay)
-
-                # Trigger events
-                input_element.send_keys(Keys.TAB)
-                time.sleep(0.5)
-
-                self.driver.execute_script(
-                    "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));",
-                    input_element
-                )
-                self.driver.execute_script(
-                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
-                    input_element
-                )
-                time.sleep(0.5)
-
-                # Analyze response
-                self.analyze_response()
-
-            except Exception as e:
-                logger.error(f"Error fuzzing with payload '{payload}': {e}")
-                self.driver.save_screenshot(f"error_{input_name}.png")
+        except (ElementNotInteractableException, TimeoutException, NoSuchElementException) as e:
+            logger.error(f"Error clicking element: {e}")
+            self.driver.save_screenshot('click_element_error.png')
 
     def analyze_response(self) -> None:
         """Analyze the server response for errors."""
         response_content = self.driver.page_source
         response_url = self.driver.current_url
-        logger.info(f"Current URL after input: {response_url}")
+        logger.info(f"Current URL after interaction: {response_url}")
 
         error_indicators = [
             'error',
             'exception',
             'not found',
             '500 Internal Server Error',
+            'JavaScript error',
         ]
 
         for indicator in error_indicators:
@@ -124,64 +100,10 @@ class Fuzzer:
                 self.driver.save_screenshot(f"issue_detected_{indicator}.png")
                 break
 
-    def get_xpath(self, element: WebElement) -> str:
-        """Get the XPath of an element."""
-        return self.driver.execute_script(
-            "function absoluteXPath(element) {"
-            "  var comp, comps = [];"
-            "  var parent = null;"
-            "  var xpath = '';"
-            "  var getPos = function(element) {"
-            "    var position = 1, curNode;"
-            "    if (element.nodeType == Node.ATTRIBUTE_NODE) {"
-            "      return null;"
-            "    }"
-            "    for (curNode = element.previousSibling; curNode; curNode = curNode.previousSibling){"
-            "      if (curNode.nodeName == element.nodeName) {"
-            "        ++position;"
-            "      }"
-            "    }"
-            "    return position;"
-            "  };"
-            "  if (element instanceof Document) {"
-            "    return '/';"
-            "  }"
-            "  for (; element && !(element instanceof Document); element = element.nodeType == Node.ATTRIBUTE_NODE ? element.ownerElement : element.parentNode) {"
-            "    comp = comps[comps.length] = {};"
-            "    switch (element.nodeType) {"
-            "      case Node.TEXT_NODE:"
-            "        comp.name = 'text()';"
-            "        break;"
-            "      case Node.ATTRIBUTE_NODE:"
-            "        comp.name = '@' + element.nodeName;"
-            "        break;"
-            "      case Node.PROCESSING_INSTRUCTION_NODE:"
-            "        comp.name = 'processing-instruction()';"
-            "        break;"
-            "      case Node.COMMENT_NODE:"
-            "        comp.name = 'comment()';"
-            "        break;"
-            "      case Node.ELEMENT_NODE:"
-            "        comp.name = element.nodeName;"
-            "        break;"
-            "    }"
-            "    comp.position = getPos(element);"
-            "  }"
-            "  for (var i = comps.length - 1; i >= 0; i--) {"
-            "    comp = comps[i];"
-            "    xpath += '/' + comp.name.toLowerCase();"
-            "    if (comp.position !== null) {"
-            "      xpath += '[' + comp.position + ']';"
-            "    }"
-            "  }"
-            "  return xpath;"
-            "} return absoluteXPath(arguments[0]);",
-            element
-        )
-
     def run(self, delay: int = 1) -> None:
         """Run the fuzzer."""
         try:
+            # Step 1: Fuzz input fields
             inputs = self.detect_inputs()
             if inputs:
                 # List available input fields
@@ -192,6 +114,13 @@ class Fuzzer:
                 input_element = form_info['inputs'][selected_field]
                 input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'
                 self.fuzz_field(input_element, input_name, delay)
+
+            # Step 2: Click through clickable elements
+            clickable_elements = self.detect_clickable_elements()
+            for element in clickable_elements:
+                self.click_element(element)
+                time.sleep(delay)
+
         finally:
             self.driver.quit()
 
@@ -232,3 +161,4 @@ class Fuzzer:
                     print(f"Invalid input: please select a number between 0 and {max_index}.")
             except ValueError:
                 print("Invalid input: please enter a valid number.")
+
