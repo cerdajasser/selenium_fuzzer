@@ -1,12 +1,12 @@
 import logging
 import time
 from typing import List, Dict
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException
 from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
 from selenium_fuzzer.logger import get_logger
@@ -100,6 +100,46 @@ class Fuzzer:
                 self.driver.save_screenshot(f"issue_detected_{indicator}.png")
                 break
 
+    def fuzz_field(self, input_element: WebElement, input_name: str, delay: int) -> None:
+        """Fuzz a single input field."""
+        payloads = generate_safe_payloads()
+
+        for payload in payloads:
+            try:
+                if not input_element.is_displayed():
+                    logger.info(f"Field {input_name} is not displayed. Attempting to unhide it.")
+                    self.unhide_field(input_element)
+                    WebDriverWait(self.driver, 20).until(EC.visibility_of(input_element))
+
+                scroll_into_view(self.driver, input_element)
+                WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.XPATH, self.get_xpath(input_element))))
+
+                input_element.clear()
+                input_element.send_keys(payload)
+                logger.info(f"Fuzzing Field: {input_name}, Payload: {payload}")
+                time.sleep(delay)
+
+                # Trigger events
+                input_element.send_keys(Keys.TAB)
+                time.sleep(0.5)
+
+                self.driver.execute_script(
+                    "arguments[0].dispatchEvent(new Event('input', { bubbles: true }));",
+                    input_element
+                )
+                self.driver.execute_script(
+                    "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                    input_element
+                )
+                time.sleep(0.5)
+
+                # Analyze response
+                self.analyze_response()
+
+            except Exception as e:
+                logger.error(f"Error fuzzing with payload '{payload}': {e}")
+                self.driver.save_screenshot(f"error_{input_name}.png")
+
     def run(self, delay: int = 1) -> None:
         """Run the fuzzer."""
         try:
@@ -161,4 +201,3 @@ class Fuzzer:
                     print(f"Invalid input: please select a number between 0 and {max_index}.")
             except ValueError:
                 print("Invalid input: please enter a valid number.")
-
