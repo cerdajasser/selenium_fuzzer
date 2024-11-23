@@ -1,0 +1,953 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "from setuptools import setup, find_packages\n\nsetup(\n    name='selenium_fuzzer',\n    version='1.0.0',\n    author='Your Name',\n    author_email='your.email@example.com',\n    description='A Selenium-based fuzzer for input fields in Angular Material applications.',\n    long_description=open('README.md').read(),\n    long_description_content_type='text/markdown',\n    url='https://github.com/yourusername/selenium_fuzzer',\n    packages=find_packages(),\n    install_requires=[\n        'selenium>=3.141.0',\n        # Add other dependencies here\n    ],\n    classifiers=[\n        'Programming Language :: Python :: 3',\n        'Operating System :: OS Independent',\n    ],\n)\n",
+			"file": "setup.py",
+			"file_size": 0,
+			"file_write_time": 133767949021536324,
+			"settings":
+			{
+				"buffer_size": 666,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAmgIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "selenium>=3.141.0",
+			"file": "requirements.txt",
+			"file_size": 0,
+			"file_write_time": 133767948873418836,
+			"settings":
+			{
+				"buffer_size": 17,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAEQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "# Byte-compiled / optimized / DLL files\n__pycache__/\n*.py[cod]\n*$py.class\n\n# Distribution / packaging\nbuild/\ndist/\n*.egg-info/\n.eggs/\n*.egg\nMANIFEST\n\n# Virtual Environments\nvenv/\nenv/\n\n# PyCharm\n.idea/\n\n# VS Code\n.vscode/\n\n# Logs\n*.log\n\n# OS files\n.DS_Store\n",
+			"file": ".gitignore",
+			"file_size": 0,
+			"file_write_time": 133767949120334649,
+			"settings":
+			{
+				"buffer_size": 258,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAAgEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "import argparse\nfrom selenium_fuzzer.fuzzer import Fuzzer\nfrom selenium_fuzzer.config import Config\n\n\ndef main():\n    # Set up argument parser for command-line options\n    parser = argparse.ArgumentParser(description=\"Selenium-based fuzzer for input fields in Angular Material applications.\")\n    parser.add_argument(\"-url\", required=True, help=\"The URL to fuzz\")\n    parser.add_argument(\"-attempts\", type=int, default=1, help=\"Number of fuzz attempts per field\")\n    parser.add_argument(\"-delay\", type=int, default=1, help=\"Delay between fuzzing attempts in seconds\")\n    parser.add_argument(\"-headless\", action=\"store_true\", help=\"Run Chrome in headless mode\")\n\n    args = parser.parse_args()\n\n    # Update configuration based on arguments\n    Config.SELENIUM_HEADLESS = args.headless\n    url = args.url\n    attempts = args.attempts\n    delay = args.delay\n\n    # Instantiate the fuzzer and run it\n    fuzzer = Fuzzer(url)\n    fuzzer.run(delay=delay)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+			"file": "main.py",
+			"file_size": 185,
+			"file_write_time": 133767956428032253,
+			"settings":
+			{
+				"buffer_size": 992,
+				"encoding": "UTF-8",
+				"line_ending": "Unix",
+				"name": "from selenium_fuzzer.fuzzer import Fuzzer"
+			},
+			"undo_stack":
+			[
+				[
+					4,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAuQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					15,
+					1,
+					"",
+					null,
+					"AgAAAAAAAAAAAAAAnAMAAAAAAAAAAAAAnAMAAAAAAACcAwAAAAAAALkAAABmcm9tIHNlbGVuaXVtX2Z1enplci5mdXp6ZXIgaW1wb3J0IEZ1enplcgoKZGVmIG1haW4oKToKICAgIHVybCA9IGlucHV0KCJFbnRlciB0aGUgVVJMIHRvIGZ1eno6ICIpCiAgICBmdXp6ZXIgPSBGdXp6ZXIodXJsKQogICAgZnV6emVyLnJ1bihkZWxheT0xKQoKaWYgX19uYW1lX18gPT0gJ19fbWFpbl9fJzoKICAgIG1haW4oKQ",
+					"AQAAAAAAAAABAAAAuQAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					23,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAAAAAAAAAAAAAAAAAAAAACcAwAAaW1wb3J0IGFyZ3BhcnNlCmZyb20gc2VsZW5pdW1fZnV6emVyLmZ1enplciBpbXBvcnQgRnV6emVyCgoKZGVmIG1haW4oKToKICAgICMgU2V0IHVwIGFyZ3VtZW50IHBhcnNlciBmb3IgY29tbWFuZC1saW5lIG9wdGlvbnMKICAgIHBhcnNlciA9IGFyZ3BhcnNlLkFyZ3VtZW50UGFyc2VyKGRlc2NyaXB0aW9uPSJTZWxlbml1bS1iYXNlZCBmdXp6ZXIgZm9yIGlucHV0IGZpZWxkcyBpbiBBbmd1bGFyIE1hdGVyaWFsIGFwcGxpY2F0aW9ucy4iKQogICAgcGFyc2VyLmFkZF9hcmd1bWVudCgiLXVybCIsIHJlcXVpcmVkPVRydWUsIGhlbHA9IlRoZSBVUkwgdG8gZnV6eiIpCiAgICBwYXJzZXIuYWRkX2FyZ3VtZW50KCItYXR0ZW1wdHMiLCB0eXBlPWludCwgZGVmYXVsdD0xLCBoZWxwPSJOdW1iZXIgb2YgZnV6eiBhdHRlbXB0cyBwZXIgZmllbGQiKQogICAgcGFyc2VyLmFkZF9hcmd1bWVudCgiLWRlbGF5IiwgdHlwZT1pbnQsIGRlZmF1bHQ9MSwgaGVscD0iRGVsYXkgYmV0d2VlbiBmdXp6aW5nIGF0dGVtcHRzIGluIHNlY29uZHMiKQogICAgcGFyc2VyLmFkZF9hcmd1bWVudCgiLWhlYWRsZXNzIiwgYWN0aW9uPSJzdG9yZV90cnVlIiwgaGVscD0iUnVuIENocm9tZSBpbiBoZWFkbGVzcyBtb2RlIikKCiAgICBhcmdzID0gcGFyc2VyLnBhcnNlX2FyZ3MoKQoKICAgICMgVXBkYXRlIGNvbmZpZ3VyYXRpb24gYmFzZWQgb24gYXJndW1lbnRzCiAgICB1cmwgPSBhcmdzLnVybAogICAgYXR0ZW1wdHMgPSBhcmdzLmF0dGVtcHRzCiAgICBkZWxheSA9IGFyZ3MuZGVsYXkKCiAgICAjIEluc3RhbnRpYXRlIHRoZSBmdXp6ZXIgYW5kIHJ1biBpdAogICAgZnV6emVyID0gRnV6emVyKHVybCkKICAgIGZ1enplci5ydW4oZGVsYXk9ZGVsYXksIGF0dGVtcHRzPWF0dGVtcHRzKQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBtYWluKCkK",
+					"AQAAAAAAAAABAAAAnAMAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					25,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAA4AMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "# Initialize the selenium_fuzzer package",
+			"file": "selenium_fuzzer/__init__.py",
+			"file_size": 0,
+			"file_write_time": 133767950680788121,
+			"settings":
+			{
+				"buffer_size": 40,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAKQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					3,
+					1,
+					"left_delete",
+					null,
+					"AQAAACgAAAAAAAAAKAAAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAKQAAAAAAAAApAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "import os\n\nclass Config:\n    \"\"\"Configuration settings for the selenium fuzzer.\"\"\"\n    CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')\n    SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'True') == 'True'\n    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')\n    LOG_FILE = os.getenv('LOG_FILE', 'selenium_fuzzer.log')\n",
+			"file": "selenium_fuzzer/config.py",
+			"file_size": 0,
+			"file_write_time": 133767950717027504,
+			"settings":
+			{
+				"buffer_size": 343,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					1,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAKAAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					8,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAAAAAAAAAAAAAAAAAAAAAAoAAAAIyBJbml0aWFsaXplIHRoZSBzZWxlbml1bV9mdXp6ZXIgcGFja2FnZQ",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					10,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAVwEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "import logging\nfrom selenium_fuzzer.config import Config\n\ndef get_logger(name: str) -> logging.Logger:\n    \"\"\"Configure and return a logger.\"\"\"\n    logger = logging.getLogger(name)\n    logger.setLevel(getattr(logging, Config.LOG_LEVEL.upper(), logging.INFO))\n\n    formatter = logging.Formatter(\n        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'\n    )\n\n    # Console handler\n    ch = logging.StreamHandler()\n    ch.setFormatter(formatter)\n    logger.addHandler(ch)\n\n    # File handler\n    fh = logging.FileHandler(Config.LOG_FILE)\n    fh.setFormatter(formatter)\n    logger.addHandler(fh)\n\n    return logger\n",
+			"file": "selenium_fuzzer/logger.py",
+			"file_size": 0,
+			"file_write_time": 133767950992662809,
+			"settings":
+			{
+				"buffer_size": 619,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAawIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "from selenium import webdriver\nfrom selenium.webdriver.chrome.service import Service\nfrom selenium.webdriver.chrome.options import Options\nfrom selenium_fuzzer.config import Config\n\ndef create_driver() -> webdriver.Chrome:\n    \"\"\"\n    Create and return a configured Selenium WebDriver instance.\n    \"\"\"\n    options = Options()\n    \n    # Set headless mode based on configuration\n    if Config.SELENIUM_HEADLESS:\n        options.add_argument('--headless')\n    \n    options.add_argument('--disable-gpu')\n    options.add_argument('--no-sandbox')\n    options.add_argument('--disable-dev-shm-usage')\n    options.add_argument('--ignore-certificate-errors')\n\n    # Initialize ChromeDriver\n    service = Service(executable_path=Config.CHROMEDRIVER_PATH)\n    driver = webdriver.Chrome(service=service, options=options)\n    driver.implicitly_wait(10)\n    return driver\n",
+			"file": "selenium_fuzzer/selenium_driver.py",
+			"file_size": 0,
+			"file_write_time": 133767951100300975,
+			"settings":
+			{
+				"buffer_size": 859,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAA+gIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					7,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAAAAAAAAAAAAAAAAAAAAAD6AgAAZnJvbSBzZWxlbml1bSBpbXBvcnQgd2ViZHJpdmVyCmZyb20gc2VsZW5pdW0ud2ViZHJpdmVyLmNocm9tZS5zZXJ2aWNlIGltcG9ydCBTZXJ2aWNlCmZyb20gc2VsZW5pdW0ud2ViZHJpdmVyLmNocm9tZS5vcHRpb25zIGltcG9ydCBPcHRpb25zCmZyb20gc2VsZW5pdW1fZnV6emVyLmNvbmZpZyBpbXBvcnQgQ29uZmlnCgpkZWYgY3JlYXRlX2RyaXZlcigpIC0+IHdlYmRyaXZlci5DaHJvbWU6CiAgICAiIiJDcmVhdGUgYW5kIHJldHVybiBhIGNvbmZpZ3VyZWQgU2VsZW5pdW0gV2ViRHJpdmVyIGluc3RhbmNlLiIiIgogICAgb3B0aW9ucyA9IE9wdGlvbnMoKQogICAgaWYgQ29uZmlnLlNFTEVOSVVNX0hFQURMRVNTOgogICAgICAgIG9wdGlvbnMuYWRkX2FyZ3VtZW50KCctLWhlYWRsZXNzJykKICAgIG9wdGlvbnMuYWRkX2FyZ3VtZW50KCctLWRpc2FibGUtZ3B1JykKICAgIG9wdGlvbnMuYWRkX2FyZ3VtZW50KCctLW5vLXNhbmRib3gnKQogICAgb3B0aW9ucy5hZGRfYXJndW1lbnQoJy0tZGlzYWJsZS1kZXYtc2htLXVzYWdlJykKICAgIG9wdGlvbnMuYWRkX2FyZ3VtZW50KCctLWlnbm9yZS1jZXJ0aWZpY2F0ZS1lcnJvcnMnKQoKICAgIHNlcnZpY2UgPSBTZXJ2aWNlKGV4ZWN1dGFibGVfcGF0aD1Db25maWcuQ0hST01FRFJJVkVSX1BBVEgpCiAgICBkcml2ZXIgPSB3ZWJkcml2ZXIuQ2hyb21lKHNlcnZpY2U9c2VydmljZSwgb3B0aW9ucz1vcHRpb25zKQogICAgZHJpdmVyLmltcGxpY2l0bHlfd2FpdCgxMCkKICAgIHJldHVybiBkcml2ZXIK",
+					"AQAAAAAAAAABAAAA+gIAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					9,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAWwMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "import random\nimport string\nfrom typing import List\nfrom selenium.webdriver.remote.webdriver import WebDriver\nfrom selenium.webdriver.remote.webelement import WebElement\n\ndef generate_safe_payloads() -> List[str]:\n    \"\"\"Generate a list of safe payloads for fuzzing.\"\"\"\n    payloads = []\n\n    # Short random strings\n    for _ in range(5):\n        payloads.append(''.join(random.choices(string.ascii_letters + string.digits, k=10)))\n\n    # Long strings to test input limits\n    payloads.append('A' * 256)\n    payloads.append('B' * 1024)\n\n    # Strings with special characters\n    special_chars = \"!@#$%^&*()_+-=[]{}|;:',.<>/?\"\n    payloads.append(special_chars)\n\n    # Unicode characters\n    payloads.append('测试中文字符')  # Chinese characters\n    payloads.append('😃👍🏻🔥')      # Emojis\n\n    # Numeric inputs\n    payloads.append('1234567890')\n    payloads.append('-999999999')\n\n    # Empty string\n    payloads.append('')\n\n    # Whitespace characters\n    payloads.append('   ')  # Spaces\n    payloads.append('\\t\\n')  # Tab and newline\n\n    # Emails\n    payloads.append('test@example.com')\n    payloads.append('user.name+tag+sorting@example.com')\n\n    return payloads\n\ndef scroll_into_view(driver: WebDriver, element: WebElement) -> None:\n    \"\"\"Scroll the element into view.\"\"\"\n    driver.execute_script(\n        \"arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});\",\n        element\n    )\n",
+			"file": "selenium_fuzzer/utils.py",
+			"file_size": 0,
+			"file_write_time": 133767950812425880,
+			"settings":
+			{
+				"buffer_size": 1399,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					4,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAdwUAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "class SeleniumFuzzerException(Exception):\n    \"\"\"Base exception class for the selenium fuzzer.\"\"\"\n    pass\n\nclass ElementNotInteractableError(SeleniumFuzzerException):\n    \"\"\"Exception raised when an element is not interactable.\"\"\"\n    pass\n\nclass ElementNotFoundError(SeleniumFuzzerException):\n    \"\"\"Exception raised when an element is not found.\"\"\"\n    pass\n",
+			"file": "selenium_fuzzer/exceptions.py",
+			"file_size": 0,
+			"file_write_time": 133767950947143585,
+			"settings":
+			{
+				"buffer_size": 361,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					5,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAaQEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "import logging\nimport time\nfrom typing import List, Dict\nfrom selenium.webdriver.common.by import By\nfrom selenium.webdriver.common.keys import Keys\nfrom selenium.webdriver.remote.webelement import WebElement\nfrom selenium.webdriver.support.ui import WebDriverWait\nfrom selenium.webdriver.support import expected_conditions as EC\nfrom selenium_fuzzer.selenium_driver import create_driver\nfrom selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view\nfrom selenium_fuzzer.logger import get_logger\nfrom selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError\n\nlogger = get_logger(__name__)\n\nclass Fuzzer:\n    \"\"\"Main class for the selenium fuzzer.\"\"\"\n\n    def __init__(self, url: str):\n        self.url = url\n        self.driver = create_driver()\n\n    def detect_inputs(self) -> List[Dict]:\n        \"\"\"Detect input fields within mat-form-field components.\"\"\"\n        logger.info(f\"Accessing URL: {self.url}\")\n        self.driver.get(self.url)\n\n        try:\n            WebDriverWait(self.driver, 40).until(\n                EC.presence_of_element_located((By.TAG_NAME, 'mat-form-field'))\n            )\n            logger.info(\"Page loaded successfully, detecting mat-form-field components.\")\n\n            mat_form_fields = self.driver.find_elements(By.TAG_NAME, 'mat-form-field')\n            logger.info(f\"Found {len(mat_form_fields)} mat-form-field elements.\")\n\n            inputs = []\n            for index, mat_field in enumerate(mat_form_fields):\n                input_elements = mat_field.find_elements(By.CSS_SELECTOR, 'input')\n                if input_elements:\n                    inputs.append({\n                        'form_index': index,\n                        'inputs': input_elements,\n                    })\n\n            if not inputs:\n                raise ElementNotFoundError(\"No input elements found within mat-form-field components.\")\n\n            return inputs\n\n        except Exception as e:\n            logger.error(f\"Error detecting inputs: {e}\")\n            self.driver.save_screenshot('error_detecting_inputs.png')\n            raise\n\n    def unhide_field(self, input_element: WebElement) -> None:\n        \"\"\"Attempt to unhide the field if it's not displayed.\"\"\"\n        try:\n            # Adjust the selector to match your application's unhide element\n            unhide_element = self.driver.find_element(By.CSS_SELECTOR, 'button[aria-label=\"Search\"]')\n            unhide_element.click()\n            time.sleep(1)\n        except Exception as e:\n            logger.error(f\"Error unhiding the field: {e}\")\n            self.driver.save_screenshot('unhide_field_error.png')\n            raise ElementNotInteractableError(f\"Cannot unhide the field: {e}\")\n\n    def fuzz_field(self, input_element: WebElement, input_name: str, delay: int) -> None:\n        \"\"\"Fuzz a single input field.\"\"\"\n        payloads = generate_safe_payloads()\n\n        for payload in payloads:\n            try:\n                if not input_element.is_displayed():\n                    logger.info(f\"Field {input_name} is not displayed. Attempting to unhide it.\")\n                    self.unhide_field(input_element)\n                    WebDriverWait(self.driver, 20).until(EC.visibility_of(input_element))\n\n                scroll_into_view(self.driver, input_element)\n                WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.XPATH, self.get_xpath(input_element))))\n\n                input_element.clear()\n                input_element.send_keys(payload)\n                logger.info(f\"Fuzzing Field: {input_name}, Payload: {payload}\")\n                time.sleep(delay)\n\n                # Trigger events\n                input_element.send_keys(Keys.TAB)\n                time.sleep(0.5)\n\n                self.driver.execute_script(\n                    \"arguments[0].dispatchEvent(new Event('input', { bubbles: true }));\",\n                    input_element\n                )\n                self.driver.execute_script(\n                    \"arguments[0].dispatchEvent(new Event('change', { bubbles: true }));\",\n                    input_element\n                )\n                time.sleep(0.5)\n\n                # Analyze response\n                self.analyze_response()\n\n            except Exception as e:\n                logger.error(f\"Error fuzzing with payload '{payload}': {e}\")\n                self.driver.save_screenshot(f\"error_{input_name}.png\")\n\n    def analyze_response(self) -> None:\n        \"\"\"Analyze the server response for errors.\"\"\"\n        response_content = self.driver.page_source\n        response_url = self.driver.current_url\n        logger.info(f\"Current URL after input: {response_url}\")\n\n        error_indicators = [\n            'error',\n            'exception',\n            'not found',\n            '500 Internal Server Error',\n        ]\n\n        for indicator in error_indicators:\n            if indicator.lower() in response_content.lower():\n                logger.warning(f\"Possible issue detected: {indicator}\")\n                self.driver.save_screenshot(f\"issue_detected_{indicator}.png\")\n                break\n\n    def get_xpath(self, element: WebElement) -> str:\n        \"\"\"Get the XPath of an element.\"\"\"\n        return self.driver.execute_script(\n            \"function absoluteXPath(element) {\"\n            \"  var comp, comps = [];\"\n            \"  var parent = null;\"\n            \"  var xpath = '';\"\n            \"  var getPos = function(element) {\"\n            \"    var position = 1, curNode;\"\n            \"    if (element.nodeType == Node.ATTRIBUTE_NODE) {\"\n            \"      return null;\"\n            \"    }\"\n            \"    for (curNode = element.previousSibling; curNode; curNode = curNode.previousSibling){\"\n            \"      if (curNode.nodeName == element.nodeName) {\"\n            \"        ++position;\"\n            \"      }\"\n            \"    }\"\n            \"    return position;\"\n            \"  };\"\n            \"  if (element instanceof Document) {\"\n            \"    return '/';\"\n            \"  }\"\n            \"  for (; element && !(element instanceof Document); element = element.nodeType == Node.ATTRIBUTE_NODE ? element.ownerElement : element.parentNode) {\"\n            \"    comp = comps[comps.length] = {};\"\n            \"    switch (element.nodeType) {\"\n            \"      case Node.TEXT_NODE:\"\n            \"        comp.name = 'text()';\"\n            \"        break;\"\n            \"      case Node.ATTRIBUTE_NODE:\"\n            \"        comp.name = '@' + element.nodeName;\"\n            \"        break;\"\n            \"      case Node.PROCESSING_INSTRUCTION_NODE:\"\n            \"        comp.name = 'processing-instruction()';\"\n            \"        break;\"\n            \"      case Node.COMMENT_NODE:\"\n            \"        comp.name = 'comment()';\"\n            \"        break;\"\n            \"      case Node.ELEMENT_NODE:\"\n            \"        comp.name = element.nodeName;\"\n            \"        break;\"\n            \"    }\"\n            \"    comp.position = getPos(element);\"\n            \"  }\"\n            \"  for (var i = comps.length - 1; i >= 0; i--) {\"\n            \"    comp = comps[i];\"\n            \"    xpath += '/' + comp.name.toLowerCase();\"\n            \"    if (comp.position !== null) {\"\n            \"      xpath += '[' + comp.position + ']';\"\n            \"    }\"\n            \"  }\"\n            \"  return xpath;\"\n            \"} return absoluteXPath(arguments[0]);\",\n            element\n        )\n\n    def run(self, delay: int = 1) -> None:\n        \"\"\"Run the fuzzer.\"\"\"\n        try:\n            inputs = self.detect_inputs()\n            if inputs:\n                # List available input fields\n                self.list_inputs(inputs)\n                # Prompt user to select input\n                selected_form, selected_field = self.select_input(inputs)\n                form_info = inputs[selected_form]\n                input_element = form_info['inputs'][selected_field]\n                input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'\n                self.fuzz_field(input_element, input_name, delay)\n        finally:\n            self.driver.quit()\n\n    def list_inputs(self, inputs: List[Dict]) -> None:\n        \"\"\"List available input fields.\"\"\"\n        print(\"\\nAvailable input fields within mat-form-field components:\")\n        for form_info in inputs:\n            form_index = form_info['form_index']\n            print(f\"mat-form-field {form_index}:\")\n            for input_index, input_element in enumerate(form_info['inputs']):\n                input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'\n                input_type = input_element.get_attribute('type') or input_element.tag_name\n                print(f\"  [{input_index}] Field: {input_name}, Type: {input_type}\")\n        print(\"\\nPlease enter only the number corresponding to your choice.\")\n\n    def select_input(self, inputs: List[Dict]) -> (int, int):\n        \"\"\"Prompt the user to select an input field.\"\"\"\n        selected_form = self.select_valid_index(\n            f\"Enter the mat-form-field number to select (0 to {len(inputs) - 1}): \",\n            len(inputs) - 1\n        )\n        selected_field = self.select_valid_index(\n            f\"Enter the field number to select (0 to {len(inputs[selected_form]['inputs']) - 1}): \",\n            len(inputs[selected_form]['inputs']) - 1\n        )\n        return selected_form, selected_field\n\n    @staticmethod\n    def select_valid_index(prompt: str, max_index: int) -> int:\n        \"\"\"Validate input selection.\"\"\"\n        while True:\n            try:\n                user_input = input(prompt).strip()\n                selected_index = int(user_input)\n                if 0 <= selected_index <= max_index:\n                    return selected_index\n                else:\n                    print(f\"Invalid input: please select a number between 0 and {max_index}.\")\n            except ValueError:\n                print(\"Invalid input: please enter a valid number.\")\n",
+			"file": "selenium_fuzzer/fuzzer.py",
+			"file_size": 0,
+			"file_write_time": 133767950745867013,
+			"settings":
+			{
+				"buffer_size": 9977,
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					2,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAA+SYAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "tests/test_fuzzer.py",
+			"settings":
+			{
+				"buffer_size": 462,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+				[
+					5,
+					1,
+					"",
+					null,
+					"AQAAAAAAAAAAAAAAzgEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/C++/C Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C Single File.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++/C Single File.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"Snippet: ",
+				"Snippet: __magic__"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 124.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/home/jazzer/wifi/gps_to_kml.py",
+		"/home/jazzer/Work/fuzzer-test1.py",
+		"/home/jazzer/tryhackme/expose/backdoor.jpg",
+		"/home/jazzer/tryhackme/christmasctf/christmas.sql",
+		"/home/jazzer/wifi/current_location_link.kml",
+		"/home/jazzer/Work/fuzzer-advanced-1.py",
+		"/home/jazzer/Work/fuzzer-advanced-2.py",
+		"/home/jazzer/Work/fuzzer-python-linux.py",
+		"/home/jazzer/Work/fuzzer-linux.py",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/server.c",
+		"/home/jazzer/opt/gpt-scripts/linux-reverse-shell-obuscated.php",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/client-linux.c",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/http_server.py",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/client-windows.c",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/client.c",
+		"/home/jazzer/opt/gpt-scripts/server-client-test/c2_client_windows.c",
+		"/home/jazzer/opt/gpt-scripts/linux-reverse-shell-obuscated.sh",
+		"/home/jazzer/opt/gpt-scripts/windows-reverse-cmd-obuscated.php",
+		"/home/jazzer/opt/gpt-scripts/https-server.py",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted-4.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted-5.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted-9.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-reverse-shell-obuscated.2.sh",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/server-client-test/server.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/server-client-test/client.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/server-client-test/c2_client_windows.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/windows/windows-dropper-evasion-1.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted-3.c",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted.c",
+		"/home/jazzer/opt/gpt-scripts/linux-reverse-python.py",
+		"/home/jazzer/opt/gpt-scripts/windows-reverse-python.py",
+		"/home/jazzer/opt/vmware-host-modules-w17.5.1/README",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/meterpreter-2.rb",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/meterpreter.rb",
+		"/home/jazzer/opt/gpt-scripts/TEST/linux/linux-dropper-encrypted-2.c",
+		"/home/jazzer/opt/gpt-scripts/dropper-windows-c-evasion.c",
+		"/home/jazzer/opt/gpt-scripts/linux-main-shell-php.php",
+		"/home/jazzer/opt/gpt-scripts/linux-main-shell-c.c",
+		"/home/jazzer/opt/gpt-scripts/linux-main-shell-sh.sh",
+		"/home/jazzer/opt/gpt-scripts/windows-reverse-cmd.c",
+		"/home/jazzer/opt/gpt-scripts/dropper-linux-c-evasion.c",
+		"/home/jazzer/opt/gpt-scripts/dropper-linux-c-evasion.2.c",
+		"/home/jazzer/opt/gpt-scripts/linux/revers-php-evasion.php",
+		"/home/jazzer/opt/gpt-scripts/linux-command-injection.c",
+		"/home/jazzer/opt/gpt-scripts/reverse-python-linux-evade.py",
+		"/home/jazzer/opt/gpt-scripts/linux-reverse-shell-evanasion-2.c",
+		"/home/jazzer/opt/gpt-scripts/linux/reverse-shell-linux-poly.sh",
+		"/home/jazzer/opt/gpt-scripts/windows/powershell-reverse-evasion.bat",
+		"/home/jazzer/opt/gpt-scripts/reverse-shell-windows-evade.cpp",
+		"/home/jazzer/opt/gpt-scripts/linux-command-injection.sh",
+		"/home/jazzer/opt/gpt-scripts/revers-php-evasion.php",
+		"/home/jazzer/opt/gpt-scripts/reverse-php-windows-evade.php",
+		"/home/jazzer/opt/gpt-scripts/reverse-shell-linux-evade-metasploit-2",
+		"/home/jazzer/opt/gpt-scripts/revershell.php",
+		"/home/jazzer/opt/gpt-scripts/powershell-reverse-evasion.bat",
+		"/home/jazzer/.zshrc"
+	],
+	"find":
+	{
+		"height": 27.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"chrome",
+			"select_fields_to_fuzz()",
+			"197",
+			"192",
+			"config",
+			"inet_pton",
+			"seccess"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "setup.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 666,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								666,
+								666
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "requirements.txt",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 17,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								17,
+								17
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 11,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": ".gitignore",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 258,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								258,
+								258
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Git Formats/Git Ignore.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "main.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 992,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								992,
+								992
+							]
+						],
+						"settings":
+						{
+							"auto_name": "from selenium_fuzzer.fuzzer import Fuzzer",
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "selenium_fuzzer/__init__.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 40,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								40,
+								40
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "selenium_fuzzer/config.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 343,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								343,
+								343
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "selenium_fuzzer/logger.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 619,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								619,
+								619
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "selenium_fuzzer/selenium_driver.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 859,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								859,
+								859
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "selenium_fuzzer/utils.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1399,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								338,
+								338
+							],
+							[
+								1399,
+								1399
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "selenium_fuzzer/exceptions.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 361,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								361,
+								361
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "selenium_fuzzer/fuzzer.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9977,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9977,
+								9977
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2791.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "tests/test_fuzzer.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 462,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								462,
+								462
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"stack_multiselect": false,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 132.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/C++/C Single File.sublime-build",
+	"project": "selenium_fuzzer.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 250.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
