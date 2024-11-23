@@ -18,9 +18,9 @@ logger = get_logger(__name__)
 class Fuzzer:
     """Main class for the selenium fuzzer."""
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, headless: bool):
         self.url = url
-        self.driver = create_driver()
+        self.driver = create_driver(headless=headless)
 
     def detect_inputs(self) -> List[Dict]:
         """Detect input fields within the page, retrying to account for dynamic loading."""
@@ -248,10 +248,11 @@ if __name__ == "__main__":
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
     parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
     parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
+    parser.add_argument("--headless", action="store_true", help="Run the browser in headless mode")
 
     args = parser.parse_args()
 
-    fuzzer = Fuzzer(args.url)
+    fuzzer = Fuzzer(args.url, headless=args.headless)
 
     if args.fuzz_fields:
         fuzzer.run_fuzz_fields(delay=args.delay)
