@@ -1,28 +1,22 @@
 import argparse
 from selenium_fuzzer.fuzzer import Fuzzer
-from selenium_fuzzer.config import Config
-
 
 def main():
-    # Set up argument parser for command-line options
-    parser = argparse.ArgumentParser(description="Selenium-based fuzzer for input fields in Angular Material applications.")
-    parser.add_argument("-url", required=True, help="The URL to fuzz")
-    parser.add_argument("-attempts", type=int, default=1, help="Number of fuzz attempts per field")
-    parser.add_argument("-delay", type=int, default=1, help="Delay between fuzzing attempts in seconds")
-    parser.add_argument("-headless", action="store_true", help="Run Chrome in headless mode")
+    parser = argparse.ArgumentParser(description="Selenium Fuzzer Script")
+    parser.add_argument("url", help="URL to fuzz")
+    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
+    parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
+    parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
 
     args = parser.parse_args()
 
-    # Update configuration based on arguments
-    Config.SELENIUM_HEADLESS = args.headless
-    url = args.url
-    attempts = args.attempts
-    delay = args.delay
+    fuzzer = Fuzzer(args.url)
 
-    # Instantiate the fuzzer and run it
-    fuzzer = Fuzzer(url)
-    fuzzer.run(delay=delay)
+    if args.fuzz_fields:
+        fuzzer.run_fuzz_fields(delay=args.delay)
 
+    if args.click_elements:
+        fuzzer.run_click_elements(delay=args.delay)
 
 if __name__ == "__main__":
     main()
