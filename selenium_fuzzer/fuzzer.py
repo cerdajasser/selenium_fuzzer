@@ -101,6 +101,28 @@ class Fuzzer:
                 self.driver.save_screenshot(f"issue_detected_{indicator}.png")
                 break
 
+    def unhide_field(self, input_element: WebElement) -> None:
+        """Attempt to unhide the field if it's not displayed."""
+        try:
+            # Look for a button or icon that could be used to unhide the element
+            parent_element = input_element.find_element(By.XPATH, "./ancestor::*[contains(@class, 'mat-form-field')]")
+            unhide_buttons = parent_element.find_elements(By.XPATH, ".//button | .//a | .//*[@onclick]")
+            
+            for button in unhide_buttons:
+                if button.is_displayed():
+                    button.click()
+                    logger.info(f"Clicked button to unhide the field: {button.tag_name} with text: {button.text}")
+                    time.sleep(1)  # Give some time for the UI to update
+                    return
+
+            logger.warning("No unhide button found or could not unhide the element.")
+
+        except NoSuchElementException:
+            logger.warning("Unable to find an unhide button.")
+        except Exception as e:
+            logger.error(f"Error unhiding the field: {e}")
+            self.driver.save_screenshot('unhide_field_error.png')
+
     def fuzz_field(self, input_element: WebElement, input_name: str, delay: int) -> None:
         """Fuzz a single input field."""
         payloads = generate_safe_payloads()
