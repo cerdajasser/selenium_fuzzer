@@ -27,7 +27,8 @@ class Fuzzer:
         logger.info(f"Accessing URL: {self.url}")
         self.driver.get(self.url)
 
-        retries = 3
+        retries = 5
+        delay_between_retries = 5
         inputs = []
         for attempt in range(retries):
             try:
@@ -61,7 +62,7 @@ class Fuzzer:
                 logger.error(f"Timeout while detecting inputs (attempt {attempt + 1}/{retries}): {e}")
                 self.driver.save_screenshot(f'error_detecting_inputs_attempt_{attempt + 1}.png')
 
-            time.sleep(2)  # Wait a bit before retrying
+            time.sleep(delay_between_retries)  # Wait a bit before retrying
 
         if not inputs:
             raise ElementNotFoundError("No visible input elements found on the page after multiple attempts.")
@@ -130,7 +131,10 @@ class Fuzzer:
                     return
 
             # As a fallback, try using JavaScript to make the field visible
-            self.driver.execute_script("arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible';", input_element)
+            self.driver.execute_script(
+                "arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible'; arguments[0].style.opacity = '1'; arguments[0].removeAttribute('hidden');",
+                input_element
+            )
             logger.info("Used JavaScript to unhide the field as a fallback.")
 
         except NoSuchElementException:
