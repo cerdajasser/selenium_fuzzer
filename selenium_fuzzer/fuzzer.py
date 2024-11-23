@@ -11,6 +11,7 @@ from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
 from selenium_fuzzer.logger import get_logger
 from selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError
+import argparse
 
 logger = get_logger(__name__)
 
@@ -140,10 +141,9 @@ class Fuzzer:
                 logger.error(f"Error fuzzing with payload '{payload}': {e}")
                 self.driver.save_screenshot(f"error_{input_name}.png")
 
-    def run(self, delay: int = 1) -> None:
-        """Run the fuzzer."""
+    def run_fuzz_fields(self, delay: int = 1) -> None:
+        """Run the fuzzer for input fields."""
         try:
-            # Step 1: Fuzz input fields
             inputs = self.detect_inputs()
             if inputs:
                 # List available input fields
@@ -154,13 +154,16 @@ class Fuzzer:
                 input_element = form_info['inputs'][selected_field]
                 input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'
                 self.fuzz_field(input_element, input_name, delay)
+        finally:
+            self.driver.quit()
 
-            # Step 2: Click through clickable elements
+    def run_click_elements(self, delay: int = 1) -> None:
+        """Run the fuzzer to click through clickable elements."""
+        try:
             clickable_elements = self.detect_clickable_elements()
             for element in clickable_elements:
                 self.click_element(element)
                 time.sleep(delay)
-
         finally:
             self.driver.quit()
 
@@ -201,3 +204,20 @@ class Fuzzer:
                     print(f"Invalid input: please select a number between 0 and {max_index}.")
             except ValueError:
                 print("Invalid input: please enter a valid number.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Selenium Fuzzer Script")
+    parser.add_argument("url", help="URL to fuzz")
+    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
+    parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
+    parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
+
+    args = parser.parse_args()
+
+    fuzzer = Fuzzer(args.url)
+
+    if args.fuzz_fields:
+        fuzzer.run_fuzz_fields(delay=args.delay)
+
+    if args.click_elements:
+        fuzzer.run_click_elements(delay=args.delay)
