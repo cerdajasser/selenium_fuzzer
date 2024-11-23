@@ -23,44 +23,50 @@ class Fuzzer:
         self.driver = create_driver()
 
     def detect_inputs(self) -> List[Dict]:
-        """Detect input fields within mat-form-field components."""
+        """Detect input fields within the page, retrying to account for dynamic loading."""
         logger.info(f"Accessing URL: {self.url}")
         self.driver.get(self.url)
 
-        try:
-            WebDriverWait(self.driver, 40).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//input | //textarea | //*[@contenteditable='true']"))
-            )
-            logger.info("Page loaded successfully, detecting input components.")
+        retries = 3
+        inputs = []
+        for attempt in range(retries):
+            try:
+                WebDriverWait(self.driver, 40).until(
+                    EC.presence_of_all_elements_located((By.XPATH, "//input | //textarea | //*[@contenteditable='true']"))
+                )
+                logger.info("Page loaded successfully, detecting input components.")
 
-            input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
-            logger.info(f"Found {len(input_elements)} input elements.")
+                input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
+                logger.info(f"Found {len(input_elements)} input elements.")
 
-            inputs = []
-            for index, input_element in enumerate(input_elements):
-                if input_element.is_displayed():
-                    inputs.append({
-                        'form_index': index,
-                        'inputs': [input_element],
-                    })
-                else:
-                    # Attempt to unhide elements if they are not displayed
-                    self.unhide_field(input_element)
+                for index, input_element in enumerate(input_elements):
                     if input_element.is_displayed():
                         inputs.append({
                             'form_index': index,
                             'inputs': [input_element],
                         })
+                    else:
+                        # Attempt to unhide elements if they are not displayed
+                        self.unhide_field(input_element)
+                        if input_element.is_displayed():
+                            inputs.append({
+                                'form_index': index,
+                                'inputs': [input_element],
+                            })
 
-            if not inputs:
-                raise ElementNotFoundError("No visible input elements found on the page.")
+                if inputs:
+                    break
 
-            return inputs
+            except TimeoutException as e:
+                logger.error(f"Timeout while detecting inputs (attempt {attempt + 1}/{retries}): {e}")
+                self.driver.save_screenshot(f'error_detecting_inputs_attempt_{attempt + 1}.png')
 
-        except TimeoutException as e:
-            logger.error(f"Timeout while detecting inputs: {e}")
-            self.driver.save_screenshot('error_detecting_inputs.png')
-            raise
+            time.sleep(2)  # Wait a bit before retrying
+
+        if not inputs:
+            raise ElementNotFoundError("No visible input elements found on the page after multiple attempts.")
+
+        return inputs
 
     def detect_clickable_elements(self) -> List[WebElement]:
         """Detect clickable elements on the page."""
@@ -123,7 +129,9 @@ class Fuzzer:
                     time.sleep(1)  # Give some time for the UI to update
                     return
 
-            logger.warning("No icon found or could not unhide the element.")
+            # As a fallback, try using JavaScript to make the field visible
+            self.driver.execute_script("arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible';", input_element)
+            logger.info("Used JavaScript to unhide the field as a fallback.")
 
         except NoSuchElementException:
             logger.warning("Unable to find an icon to unhide the element.")
@@ -233,16 +241,4 @@ class Fuzzer:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Selenium Fuzzer Script")
     parser.add_argument("url", help="URL to fuzz")
-    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
-    parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
-    parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
-
-    args = parser.parse_args()
-
-    fuzzer = Fuzzer(args.url)
-
-    if args.fuzz_fields:
-        fuzzer.run_fuzz_fields(delay=args.delay)
-
-    if args.click_elements:
-        fuzzer.run_click_elements(delay=args.delay)
+    parser.add_argument("--fuzz-fields", action="store_true", help
