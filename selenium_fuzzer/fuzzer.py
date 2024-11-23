@@ -29,24 +29,31 @@ class Fuzzer:
 
         try:
             WebDriverWait(self.driver, 40).until(
-                EC.presence_of_element_located((By.TAG_NAME, 'mat-form-field'))
+                EC.presence_of_all_elements_located((By.XPATH, "//input | //textarea | //*[@contenteditable='true']"))
             )
-            logger.info("Page loaded successfully, detecting mat-form-field components.")
+            logger.info("Page loaded successfully, detecting input components.")
 
-            mat_form_fields = self.driver.find_elements(By.TAG_NAME, 'mat-form-field')
-            logger.info(f"Found {len(mat_form_fields)} mat-form-field elements.")
+            input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
+            logger.info(f"Found {len(input_elements)} input elements.")
 
             inputs = []
-            for index, mat_field in enumerate(mat_form_fields):
-                input_elements = mat_field.find_elements(By.CSS_SELECTOR, 'input')
-                if input_elements:
+            for index, input_element in enumerate(input_elements):
+                if input_element.is_displayed():
                     inputs.append({
                         'form_index': index,
-                        'inputs': input_elements,
+                        'inputs': [input_element],
                     })
+                else:
+                    # Attempt to unhide elements if they are not displayed
+                    self.unhide_field(input_element)
+                    if input_element.is_displayed():
+                        inputs.append({
+                            'form_index': index,
+                            'inputs': [input_element],
+                        })
 
             if not inputs:
-                raise ElementNotFoundError("No input elements found within mat-form-field components.")
+                raise ElementNotFoundError("No visible input elements found on the page.")
 
             return inputs
 
@@ -104,22 +111,22 @@ class Fuzzer:
     def unhide_field(self, input_element: WebElement) -> None:
         """Attempt to unhide the field if it's not displayed."""
         try:
-            # Look for the search icon within the same parent container
-            parent_element = input_element.find_element(By.XPATH, "./ancestor::*[contains(@class, 'mat-form-field')]")
-            search_icons = parent_element.find_elements(By.XPATH, ".//mat-icon[contains(@class, 'mat-search_icon-search') or contains(text(), 'search')]")
+            # Look for the search icon or other clickable elements within the same parent container
+            parent_element = input_element.find_element(By.XPATH, "./ancestor::*[contains(@class, 'mat-form-field') or contains(@class, 'form-group') or contains(@class, 'input-container')]")
+            search_icons = parent_element.find_elements(By.XPATH, ".//mat-icon[contains(@class, 'mat-search_icon-search') or contains(text(), 'search')] | .//button | .//a")
             
-            # Try to click the search icon to unhide the input field
+            # Try to click the search icon or other elements to unhide the input field
             for icon in search_icons:
                 if icon.is_displayed():
                     icon.click()
-                    logger.info(f"Clicked search icon to unhide the field: {icon.tag_name} with text: {icon.text}")
+                    logger.info(f"Clicked icon to unhide the field: {icon.tag_name} with text: {icon.text}")
                     time.sleep(1)  # Give some time for the UI to update
                     return
 
-            logger.warning("No search icon found or could not unhide the element.")
+            logger.warning("No icon found or could not unhide the element.")
 
         except NoSuchElementException:
-            logger.warning("Unable to find a search icon to unhide the element.")
+            logger.warning("Unable to find an icon to unhide the element.")
         except Exception as e:
             logger.error(f"Error unhiding the field: {e}")
             self.driver.save_screenshot('unhide_field_error.png')
@@ -192,27 +199,22 @@ class Fuzzer:
 
     def list_inputs(self, inputs: List[Dict]) -> None:
         """List available input fields."""
-        print("\nAvailable input fields within mat-form-field components:")
+        print("\nAvailable input fields:")
         for form_info in inputs:
             form_index = form_info['form_index']
-            print(f"mat-form-field {form_index}:")
             for input_index, input_element in enumerate(form_info['inputs']):
                 input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'
                 input_type = input_element.get_attribute('type') or input_element.tag_name
-                print(f"  [{input_index}] Field: {input_name}, Type: {input_type}")
+                print(f"  [{form_index}-{input_index}] Field: {input_name}, Type: {input_type}")
         print("\nPlease enter only the number corresponding to your choice.")
 
     def select_input(self, inputs: List[Dict]) -> (int, int):
         """Prompt the user to select an input field."""
         selected_form = self.select_valid_index(
-            f"Enter the mat-form-field number to select (0 to {len(inputs) - 1}): ",
+            f"Enter the input number to select (0 to {len(inputs) - 1}): ",
             len(inputs) - 1
         )
-        selected_field = self.select_valid_index(
-            f"Enter the field number to select (0 to {len(inputs[selected_form]['inputs']) - 1}): ",
-            len(inputs[selected_form]['inputs']) - 1
-        )
-        return selected_form, selected_field
+        return selected_form, 0
 
     @staticmethod
     def select_valid_index(prompt: str, max_index: int) -> int:
@@ -222,25 +224,3 @@ class Fuzzer:
                 user_input = input(prompt).strip()
                 selected_index = int(user_input)
                 if 0 <= selected_index <= max_index:
-                    return selected_index
-                else:
-                    print(f"Invalid input: please select a number between 0 and {max_index}.")
-            except ValueError:
-                print("Invalid input: please enter a valid number.")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Selenium Fuzzer Script")
-    parser.add_argument("url", help="URL to fuzz")
-    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
-    parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
-    parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
-
-    args = parser.parse_args()
-
-    fuzzer = Fuzzer(args.url)
-
-    if args.fuzz_fields:
-        fuzzer.run_fuzz_fields(delay=args.delay)
-
-    if args.click_elements:
-        fuzzer.run_click_elements(delay=args.delay)
