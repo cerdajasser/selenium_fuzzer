@@ -104,21 +104,22 @@ class Fuzzer:
     def unhide_field(self, input_element: WebElement) -> None:
         """Attempt to unhide the field if it's not displayed."""
         try:
-            # Look for a button or icon that could be used to unhide the element
+            # Look for the search icon within the same parent container
             parent_element = input_element.find_element(By.XPATH, "./ancestor::*[contains(@class, 'mat-form-field')]")
-            unhide_buttons = parent_element.find_elements(By.XPATH, ".//button | .//a | .//*[@onclick]")
+            search_icons = parent_element.find_elements(By.XPATH, ".//mat-icon[contains(@class, 'mat-search_icon-search') or contains(text(), 'search')]")
             
-            for button in unhide_buttons:
-                if button.is_displayed():
-                    button.click()
-                    logger.info(f"Clicked button to unhide the field: {button.tag_name} with text: {button.text}")
+            # Try to click the search icon to unhide the input field
+            for icon in search_icons:
+                if icon.is_displayed():
+                    icon.click()
+                    logger.info(f"Clicked search icon to unhide the field: {icon.tag_name} with text: {icon.text}")
                     time.sleep(1)  # Give some time for the UI to update
                     return
 
-            logger.warning("No unhide button found or could not unhide the element.")
+            logger.warning("No search icon found or could not unhide the element.")
 
         except NoSuchElementException:
-            logger.warning("Unable to find an unhide button.")
+            logger.warning("Unable to find a search icon to unhide the element.")
         except Exception as e:
             logger.error(f"Error unhiding the field: {e}")
             self.driver.save_screenshot('unhide_field_error.png')
