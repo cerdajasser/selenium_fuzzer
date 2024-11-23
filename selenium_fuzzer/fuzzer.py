@@ -223,4 +223,7 @@ class Fuzzer:
             try:
                 user_input = input(prompt).strip()
                 selected_index = int(user_input)
-                if 0 <= selected_index <= max_index:
+                                if 0 <= selected_index <= max_index:
+                    return selected_index
+                else:
+                    print(f"Invalid input: please select a number between 0 and {max_index}.")
