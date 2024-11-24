@@ -1,3 +1,4 @@
+import logging
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
@@ -6,9 +7,13 @@ import string
 from typing import List
 import time
 
+logger = logging.getLogger(__name__)
+
+
 def scroll_into_view(driver, element: WebElement) -> None:
     """Scroll the element into view."""
     driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", element)
+
 
 def get_xpath(element: WebElement) -> str:
     """Get the XPath of a WebElement by traversing the DOM."""
@@ -41,10 +46,12 @@ def get_xpath(element: WebElement) -> str:
 
         except (NoSuchElementException, StaleElementReferenceException) as e:
             # If we encounter an error getting the parent, break the loop
+            logger.warning(f"Encountered exception while getting parent: {e}")
             break
 
     components.reverse()
     return '/' + '/'.join(components)
+
 
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""
@@ -97,6 +104,7 @@ def generate_safe_payloads() -> List[str]:
 
     return payloads
 
+
 def retry_on_stale_element(func):
     """Decorator to retry a function if a StaleElementReferenceException is encountered."""
     def wrapper(*args, **kwargs):
@@ -104,12 +112,15 @@ def retry_on_stale_element(func):
         for attempt in range(max_retries):
             try:
                 return func(*args, **kwargs)
-            except StaleElementReferenceException:
+            except StaleElementReferenceException as e:
+                logger.warning(f"StaleElementReferenceException encountered. Attempt {attempt + 1} of {max_retries}. Error: {e}")
                 if attempt < max_retries - 1:
                     time.sleep(1)
                 else:
+                    logger.error(f"Max retries reached. StaleElementReferenceException could not be resolved: {e}")
                     raise
     return wrapper
+
 
 @retry_on_stale_element
 def is_element_displayed(element: WebElement) -> bool:
