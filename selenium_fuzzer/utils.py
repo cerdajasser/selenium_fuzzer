@@ -3,6 +3,7 @@ import string
 from typing import List
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.common.by import By  # Ensure this is imported
 
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""
