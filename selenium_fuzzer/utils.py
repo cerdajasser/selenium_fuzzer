@@ -5,7 +5,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
-from selenium.webdriver.common.accessibility import Accessibility
 import random
 import string
 from typing import List
@@ -176,15 +175,14 @@ def find_and_interact_with_input(driver, xpath: str, css_selector: str, payload:
 
 
 def find_accessible_elements(driver) -> List[WebElement]:
-    """Use Chromium's accessibility features to find input fields and buttons."""
+    """Find input fields and buttons using standard methods."""
     accessible_elements = []
     try:
-        accessibility = Accessibility(driver)
-        nodes = accessibility.get_full_ax_tree()
-        for node in nodes:
-            if node['role'] in ['textField', 'button']:
-                element = driver.execute_script('return arguments[0];', node)
-                accessible_elements.append(element)
+        input_elements = driver.find_elements(By.TAG_NAME, "input")
+        button_elements = driver.find_elements(By.TAG_NAME, "button")
+        accessible_elements.extend(input_elements)
+        accessible_elements.extend(button_elements)
+        logger.info(f"Found {len(accessible_elements)} accessible input fields and buttons.")
     except Exception as e:
         logger.error(f"Error finding accessible elements: {e}")
     return accessible_elements
