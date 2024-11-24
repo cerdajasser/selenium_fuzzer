@@ -1,13 +1,11 @@
-import random
-import string
-from typing import List
-from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
-import time
+import random
+import string
+from typing import List
 
-def scroll_into_view(driver: WebDriver, element: WebElement) -> None:
+def scroll_into_view(driver, element: WebElement) -> None:
     """Scroll the element into view."""
     driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", element)
 
@@ -19,7 +17,11 @@ def get_xpath(element: WebElement) -> str:
         try:
             # Get the parent element of the current node
             parent = child.find_element(By.XPATH, "..")
-            
+
+            # Ensure the parent is not the document root or an invalid element
+            if not isinstance(parent, WebElement):
+                break
+
             # Find siblings with the same tag name to determine the index
             siblings = parent.find_elements(By.XPATH, child.tag_name)
 
@@ -33,7 +35,9 @@ def get_xpath(element: WebElement) -> str:
             else:
                 components.append(child.tag_name)
 
+            # Move up to the parent for the next iteration
             child = parent
+
         except (NoSuchElementException, StaleElementReferenceException) as e:
             # If we encounter an error getting the parent, break the loop
             break
@@ -91,4 +95,3 @@ def generate_safe_payloads() -> List[str]:
     payloads.append('"SELECT * FROM users WHERE id = 1"')  # SQL-like input
 
     return payloads
-
