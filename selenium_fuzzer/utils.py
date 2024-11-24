@@ -1,7 +1,10 @@
 import logging
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 import random
 import string
 from typing import List
@@ -127,3 +130,30 @@ def is_element_displayed(element: WebElement, driver) -> bool:
     """Check if an element is displayed, with retry logic for stale elements."""
     scroll_into_view(driver, element)  # Scroll into view before checking visibility
     return element.is_displayed()
+
+
+def find_and_interact_with_input(driver, xpath: str, css_selector: str, payload: str) -> None:
+    """Find an input element by XPath or CSS selector and interact with it using a payload."""
+    try:
+        # Use explicit wait to ensure the element is present
+        input_element = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
+    except TimeoutException:
+        logger.warning(f"Element with XPath {xpath} not found, trying CSS selector.")
+        try:
+            input_element = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, css_selector))
+            )
+        except TimeoutException:
+            logger.error(f"Element with CSS selector {css_selector} not found.")
+            return
+
+    # Scroll into view and interact with the element
+    scroll_into_view(driver, input_element)
+    try:
+        input_element.clear()
+        input_element.send_keys(payload)
+        logger.info(f"Successfully interacted with element using payload: {payload}")
+    except StaleElementReferenceException as e:
+        logger.error(f"Error interacting with element: {e}")
