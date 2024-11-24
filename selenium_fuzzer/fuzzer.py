@@ -11,7 +11,8 @@ from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
 from selenium_fuzzer.logger import get_logger
 from selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError
-import argparse
+import argparsefrom selenium_fuzzer.config import Config
+
 
 logger = get_logger(__name__)
 
