@@ -13,6 +13,9 @@ from selenium_fuzzer.logger import get_logger
 from selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError
 from selenium_fuzzer.config import Config
 import argparse
+from selenium_fuzzer.unhider import Unhider
+from selenium_fuzzer.input_detector import InputDetector
+from selenium_fuzzer.click_analyzer import ClickAnalyzer
 
 logger = get_logger(__name__)
 
@@ -22,140 +25,9 @@ class Fuzzer:
     def __init__(self, url: str, headless: bool = False):
         self.url = url
         self.driver = create_driver(headless=headless)
-
-    def detect_inputs(self) -> List[Dict]:
-        """Detect input fields within the page, retrying to account for dynamic loading and stale elements."""
-        logger.info(f"Accessing URL: {self.url}")
-        self.driver.get(self.url)
-
-        retries = 5
-        delay_between_retries = 5
-        inputs = []
-        for attempt in range(retries):
-            try:
-                WebDriverWait(self.driver, 40).until(
-                    EC.presence_of_all_elements_located((By.XPATH, "//input | //textarea | //*[@contenteditable='true']"))
-                )
-                logger.info("Page loaded successfully, detecting input components.")
-
-                input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
-                logger.info(f"Found {len(input_elements)} input elements.")
-
-                for index, input_element in enumerate(input_elements):
-                    try:
-                        if input_element.is_displayed():
-                            inputs.append({
-                                'form_index': index,
-                                'inputs': [input_element],
-                            })
-                        else:
-                            # Attempt to unhide elements if they are not displayed
-                            self.unhide_field(input_element)
-                            if input_element.is_displayed():
-                                inputs.append({
-                                    'form_index': index,
-                                    'inputs': [input_element],
-                                })
-                    except StaleElementReferenceException:
-                        logger.warning(f"StaleElementReferenceException encountered for element {index}. Retrying...")
-                        input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
-                        continue
-
-                if inputs:
-                    break
-
-            except TimeoutException as e:
-                logger.error(f"Timeout while detecting inputs (attempt {attempt + 1}/{retries}): {e}")
-                self.driver.save_screenshot(f'error_detecting_inputs_attempt_{attempt + 1}.png')
-
-            time.sleep(delay_between_retries)  # Wait a bit before retrying
-
-        if not inputs:
-            raise ElementNotFoundError("No visible input elements found on the page after multiple attempts.")
-
-        return inputs
-
-    def detect_clickable_elements(self) -> List[WebElement]:
-        """Detect clickable elements on the page."""
-        try:
-            clickable_elements = self.driver.find_elements(By.XPATH, "//a | //button | //*[@onclick]")
-            logger.info(f"Detected {len(clickable_elements)} clickable elements.")
-            return clickable_elements
-        except Exception as e:
-            logger.error(f"Error detecting clickable elements: {e}")
-            return []
-
-    def click_element(self, element: WebElement) -> None:
-        """Click an element and analyze the page for errors."""
-        try:
-            # Scroll into view and click the element
-            scroll_into_view(self.driver, element)
-            WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable(element))
-            element.click()
-            logger.info(f"Clicked element: {element.tag_name} with text: {element.text}")
-
-            # Analyze the page response after clicking
-            self.analyze_response()
-
-        except (ElementNotInteractableException, TimeoutException, NoSuchElementException) as e:
-            logger.error(f"Error clicking element: {e}")
-            self.driver.save_screenshot('click_element_error.png')
-
-    def analyze_response(self) -> None:
-        """Analyze the server response for errors."""
-        response_content = self.driver.page_source
-        response_url = self.driver.current_url
-        logger.info(f"Current URL after interaction: {response_url}")
-
-        error_indicators = [
-            'error',
-            'exception',
-            'not found',
-            '500 Internal Server Error',
-            'JavaScript error',
-        ]
-
-        for indicator in error_indicators:
-            if indicator.lower() in response_content.lower():
-                logger.warning(f"Possible issue detected: {indicator}")
-                self.driver.save_screenshot(f"issue_detected_{indicator}.png")
-                break
-
-    def unhide_field(self, input_element: WebElement) -> None:
-        """Attempt to unhide the field if it's not displayed."""
-        retries = 3
-        for attempt in range(retries):
-            try:
-                # Look for the search icon or other clickable elements within the same parent container
-                parent_element = input_element.find_element(By.XPATH, "./ancestor::*[contains(@class, 'mat-form-field') or contains(@class, 'form-group') or contains(@class, 'input-container')]")
-                search_icons = parent_element.find_elements(By.XPATH, ".//mat-icon[contains(@class, 'mat-search_icon-search') or contains(text(), 'search')] | .//button | .//a")
-                
-                # Try to click the search icon or other elements to unhide the input field
-                for icon in search_icons:
-                    if icon.is_displayed():
-                        icon.click()
-                        logger.info(f"Clicked icon to unhide the field: {icon.tag_name} with text: {icon.text}")
-                        time.sleep(1)  # Give some time for the UI to update
-                        return
-
-                # As a fallback, try using JavaScript to make the field visible
-                self.driver.execute_script(
-                    "arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible'; arguments[0].style.opacity = '1'; arguments[0].removeAttribute('hidden');",
-                    input_element
-                )
-                logger.info("Used JavaScript to unhide the field as a fallback.")
-                return
-
-            except StaleElementReferenceException:
-                logger.warning(f"StaleElementReferenceException encountered while unhiding the field (attempt {attempt + 1}/{retries}). Retrying...")
-                time.sleep(1)
-            except NoSuchElementException:
-                logger.warning("Unable to find an icon to unhide the element.")
-                break
-            except Exception as e:
-                logger.error(f"Error unhiding the field: {e}")
-                self.driver.save_screenshot('unhide_field_error.png')
-                break
+        self.unhider = Unhider(self.driver)
+        self.input_detector = InputDetector(self.driver)
+        self.click_analyzer = ClickAnalyzer(self.driver)
 
     def fuzz_field(self, input_element: WebElement, input_name: str, delay: int) -> None:
         """Fuzz a single input field."""
@@ -165,7 +37,7 @@ class Fuzzer:
             try:
                 if not input_element.is_displayed():
                     logger.info(f"Field {input_name} is not displayed. Attempting to unhide it.")
-                    self.unhide_field(input_element)
+                    self.unhider.unhide_field(input_element)
                     WebDriverWait(self.driver, 20).until(EC.visibility_of(input_element))
 
                 scroll_into_view(self.driver, input_element)
@@ -191,7 +63,7 @@ class Fuzzer:
                 time.sleep(0.5)
 
                 # Analyze response
-                self.analyze_response()
+                self.click_analyzer.analyze_response()
 
             except Exception as e:
                 logger.error(f"Error fuzzing with payload '{payload}': {e}")
@@ -200,12 +72,12 @@ class Fuzzer:
     def run_fuzz_fields(self, delay: int = 1) -> None:
         """Run the fuzzer for input fields."""
         try:
-            inputs = self.detect_inputs()
+            inputs = self.input_detector.detect_inputs(self.url)
             if inputs:
                 # List available input fields
-                self.list_inputs(inputs)
+                self.input_detector.list_inputs(inputs)
                 # Prompt user to select input
-                selected_form, selected_field = self.select_input(inputs)
+                selected_form, selected_field = self.input_detector.select_input(inputs)
                 form_info = inputs[selected_form]
                 input_element = form_info['inputs'][selected_field]
                 input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'
@@ -216,45 +88,12 @@ class Fuzzer:
     def run_click_elements(self, delay: int = 1) -> None:
         """Run the fuzzer to click through clickable elements."""
         try:
-            clickable_elements = self.detect_clickable_elements()
+            clickable_elements = self.input_detector.detect_clickable_elements()
             for element in clickable_elements:
-                self.click_element(element)
+                self.click_analyzer.click_element(element)
                 time.sleep(delay)
         finally:
             self.driver.quit()
-
-    def list_inputs(self, inputs: List[Dict]) -> None:
-        """List available input fields."""
-        print("\nAvailable input fields:")
-        for form_info in inputs:
-            form_index = form_info['form_index']
-            for input_index, input_element in enumerate(form_info['inputs']):
-                input_name = input_element.get_attribute('id') or input_element.get_attribute('name') or 'Unnamed'
-                input_type = input_element.get_attribute('type') or input_element.tag_name
-                print(f"  [{form_index}-{input_index}] Field: {input_name}, Type: {input_type}")
-        print("\nPlease enter only the number corresponding to your choice.")
-
-    def select_input(self, inputs: List[Dict]) -> (int, int):
-        """Prompt the user to select an input field."""
-        selected_form = self.select_valid_index(
-            f"Enter the input number to select (0 to {len(inputs) - 1}): ",
-            len(inputs) - 1
-        )
-        return selected_form, 0
-
-    @staticmethod
-    def select_valid_index(prompt: str, max_index: int) -> int:
-        """Validate input selection."""
-        while True:
-            try:
-                user_input = input(prompt).strip()
-                selected_index = int(user_input)
-                if 0 <= selected_index <= max_index:
-                    return selected_index
-                else:
-                    print(f"Invalid input: please select a number between 0 and {max_index}.")
-            except ValueError:
-                print("Invalid input: please enter a valid number.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Selenium Fuzzer Script")
