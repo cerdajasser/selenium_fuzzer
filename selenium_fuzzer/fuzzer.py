@@ -1,7 +1,7 @@
 import logging
 import time
 from typing import List, Dict
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
@@ -11,21 +11,20 @@ from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
 from selenium_fuzzer.logger import get_logger
 from selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError
-import argparse
 from selenium_fuzzer.config import Config
-
+import argparse
 
 logger = get_logger(__name__)
 
 class Fuzzer:
     """Main class for the selenium fuzzer."""
 
-    def __init__(self, url: str, headless: bool):
+    def __init__(self, url: str, headless: bool = False):
         self.url = url
         self.driver = create_driver(headless=headless)
 
     def detect_inputs(self) -> List[Dict]:
-        """Detect input fields within the page, retrying to account for dynamic loading."""
+        """Detect input fields within the page, retrying to account for dynamic loading and stale elements."""
         logger.info(f"Accessing URL: {self.url}")
         self.driver.get(self.url)
 
@@ -43,19 +42,24 @@ class Fuzzer:
                 logger.info(f"Found {len(input_elements)} input elements.")
 
                 for index, input_element in enumerate(input_elements):
-                    if input_element.is_displayed():
-                        inputs.append({
-                            'form_index': index,
-                            'inputs': [input_element],
-                        })
-                    else:
-                        # Attempt to unhide elements if they are not displayed
-                        self.unhide_field(input_element)
+                    try:
                         if input_element.is_displayed():
                             inputs.append({
                                 'form_index': index,
                                 'inputs': [input_element],
                             })
+                        else:
+                            # Attempt to unhide elements if they are not displayed
+                            self.unhide_field(input_element)
+                            if input_element.is_displayed():
+                                inputs.append({
+                                    'form_index': index,
+                                    'inputs': [input_element],
+                                })
+                    except StaleElementReferenceException:
+                        logger.warning(f"StaleElementReferenceException encountered for element {index}. Retrying...")
+                        input_elements = self.driver.find_elements(By.XPATH, "//input | //textarea | //*[@contenteditable='true']")
+                        continue
 
                 if inputs:
                     break
@@ -250,11 +254,10 @@ if __name__ == "__main__":
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields")
     parser.add_argument("--click-elements", action="store_true", help="Click through clickable elements")
     parser.add_argument("--delay", type=int, default=1, help="Delay between actions in seconds")
-    parser.add_argument("--headless", action="store_true", help="Run the browser in headless mode")
 
     args = parser.parse_args()
 
-    fuzzer = Fuzzer(args.url, headless=args.headless)
+    fuzzer = Fuzzer(args.url, headless=Config.SELENIUM_HEADLESS)
 
     if args.fuzz_fields:
         fuzzer.run_fuzz_fields(delay=args.delay)
