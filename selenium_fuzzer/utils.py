@@ -4,6 +4,7 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 import random
 import string
 from typing import List
+import time
 
 def scroll_into_view(driver, element: WebElement) -> None:
     """Scroll the element into view."""
@@ -95,3 +96,22 @@ def generate_safe_payloads() -> List[str]:
     payloads.append('"SELECT * FROM users WHERE id = 1"')  # SQL-like input
 
     return payloads
+
+def retry_on_stale_element(func):
+    """Decorator to retry a function if a StaleElementReferenceException is encountered."""
+    def wrapper(*args, **kwargs):
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except StaleElementReferenceException:
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                else:
+                    raise
+    return wrapper
+
+@retry_on_stale_element
+def is_element_displayed(element: WebElement) -> bool:
+    """Check if an element is displayed, with retry logic for stale elements."""
+    return element.is_displayed()
