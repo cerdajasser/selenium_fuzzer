@@ -26,3 +26,7 @@ env/
 
 # OS files
 .DS_Store
+
+#suble project files
+.sublime-project
+.sublime-workspace
