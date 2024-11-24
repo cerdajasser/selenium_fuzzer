@@ -134,26 +134,41 @@ def is_element_displayed(element: WebElement, driver) -> bool:
 
 def find_and_interact_with_input(driver, xpath: str, css_selector: str, payload: str) -> None:
     """Find an input element by XPath or CSS selector and interact with it using a payload."""
-    try:
-        # Use explicit wait to ensure the element is present
-        input_element = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, xpath))
-        )
-    except TimeoutException:
-        logger.warning(f"Element with XPath {xpath} not found, trying CSS selector.")
+    max_retries = 5
+    for attempt in range(max_retries):
         try:
+            # Use explicit wait to ensure the element is present using XPath first
             input_element = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, css_selector))
+                EC.presence_of_element_located((By.XPATH, xpath))
             )
+            logger.info(f"Element found using XPath: {xpath}")
         except TimeoutException:
-            logger.error(f"Element with CSS selector {css_selector} not found.")
-            return
+            logger.warning(f"Element with XPath {xpath} not found, trying CSS selector. Attempt {attempt + 1} of {max_retries}")
+            try:
+                input_element = WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, css_selector))
+                )
+                logger.info(f"Element found using CSS selector: {css_selector}")
+            except TimeoutException:
+                logger.error(f"Element with CSS selector {css_selector} not found. Attempt {attempt + 1} of {max_retries}")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                else:
+                    logger.error(f"Max retries reached. Could not locate element.")
+                    return
 
-    # Scroll into view and interact with the element
-    scroll_into_view(driver, input_element)
-    try:
-        input_element.clear()
-        input_element.send_keys(payload)
-        logger.info(f"Successfully interacted with element using payload: {payload}")
-    except StaleElementReferenceException as e:
-        logger.error(f"Error interacting with element: {e}")
+        # Scroll into view and interact with the element
+        scroll_into_view(driver, input_element)
+        try:
+            input_element.clear()
+            input_element.send_keys(payload)
+            logger.info(f"Successfully interacted with element using payload: {payload}")
+            break
+        except StaleElementReferenceException as e:
+            logger.warning(f"StaleElementReferenceException encountered during interaction. Attempt {attempt + 1} of {max_retries}. Error: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(1)
+            else:
+                logger.error(f"Max retries reached. StaleElementReferenceException could not be resolved: {e}")
+                return
