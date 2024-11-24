@@ -8,14 +8,13 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.selenium_driver import create_driver
-from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view
+from selenium_fuzzer.utils import generate_safe_payloads, scroll_into_view, get_xpath
 from selenium_fuzzer.logger import get_logger
 from selenium_fuzzer.exceptions import ElementNotFoundError, ElementNotInteractableError
-from selenium_fuzzer.config import Config
-import argparse
 from selenium_fuzzer.unhider import Unhider
 from selenium_fuzzer.input_detector import InputDetector
 from selenium_fuzzer.click_analyzer import ClickAnalyzer
+import argparse
 
 logger = get_logger(__name__)
 
@@ -41,7 +40,8 @@ class Fuzzer:
                     WebDriverWait(self.driver, 20).until(EC.visibility_of(input_element))
 
                 scroll_into_view(self.driver, input_element)
-                WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.XPATH, self.get_xpath(input_element))))
+                xpath = get_xpath(input_element)
+                WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.XPATH, xpath)))
 
                 input_element.clear()
                 input_element.send_keys(payload)

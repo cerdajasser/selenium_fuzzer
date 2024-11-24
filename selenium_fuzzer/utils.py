@@ -3,6 +3,7 @@ import string
 from typing import List
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from selenium_fuzzer.utils import get_xpath
 
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""
@@ -47,3 +48,58 @@ def scroll_into_view(driver: WebDriver, element: WebElement) -> None:
         "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
         element
     )
+
+def scroll_into_view(driver, element: WebElement) -> None:
+    """Scroll the element into view."""
+    driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", element)
+
+def get_xpath(element: WebElement) -> str:
+    """Get the XPath of a WebElement by traversing the DOM."""
+    components = []
+    child = element
+    while child is not None:
+        parent = child.find_element(By.XPATH, "..")
+        siblings = parent.find_elements(By.XPATH, child.tag_name)
+
+        if len(siblings) > 1:
+            index = 1
+            for i in range(len(siblings)):
+                if siblings[i] == child:
+                    index = i + 1
+                    break
+            components.append(f'{child.tag_name}[{index}]')
+        else:
+            components.append(child.tag_name)
+
+        try:
+            child = parent
+        except:
+            break
+
+    components.reverse()
+    return '/' + '/'.join(components)
+def get_xpath(element: WebElement) -> str:
+    """Get the XPath of a WebElement by traversing the DOM."""
+    components = []
+    child = element
+    while child is not None:
+        parent = child.find_element(By.XPATH, "..")
+        siblings = parent.find_elements(By.XPATH, child.tag_name)
+
+        if len(siblings) > 1:
+            index = 1
+            for i in range(len(siblings)):
+                if siblings[i] == child:
+                    index = i + 1
+                    break
+            components.append(f'{child.tag_name}[{index}]')
+        else:
+            components.append(child.tag_name)
+
+        try:
+            child = parent
+        except:
+            break
+
+    components.reverse()
+    return '/' + '/'.join(components)
