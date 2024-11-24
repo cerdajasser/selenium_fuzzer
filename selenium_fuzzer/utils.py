@@ -108,7 +108,7 @@ def generate_safe_payloads() -> List[str]:
 def retry_on_stale_element(func):
     """Decorator to retry a function if a StaleElementReferenceException is encountered."""
     def wrapper(*args, **kwargs):
-        max_retries = 3
+        max_retries = 5  # Increased retries to handle dynamic elements better
         for attempt in range(max_retries):
             try:
                 return func(*args, **kwargs)
@@ -123,6 +123,7 @@ def retry_on_stale_element(func):
 
 
 @retry_on_stale_element
-def is_element_displayed(element: WebElement) -> bool:
+def is_element_displayed(element: WebElement, driver) -> bool:
     """Check if an element is displayed, with retry logic for stale elements."""
+    scroll_into_view(driver, element)  # Scroll into view before checking visibility
     return element.is_displayed()
