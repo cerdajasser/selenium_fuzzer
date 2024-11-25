@@ -4,6 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
@@ -16,6 +17,7 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
+    parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     args = parser.parse_args()
 
     # Set up logging
@@ -42,7 +44,6 @@ def main():
             input_fields = fuzzer.detect_inputs()
             if not input_fields:
                 logger.warning("No input fields detected on the page.")
-                input("Press Enter to close the browser...")  # Keep the browser open until user input
                 return
 
             print("Detected input fields:")
@@ -100,6 +101,29 @@ def main():
                 logger.info("Form submitted successfully with no validation errors.")
             else:
                 logger.warning("Form submission may have errors or unexpected behavior. Please review the page for error messages.")
+
+        if args.check_dropdowns:
+            # Find all dropdown menus (select elements)
+            dropdowns = driver.find_elements(By.TAG_NAME, "select")
+            if not dropdowns:
+                logger.warning("No dropdown menus detected on the page.")
+            else:
+                for idx, dropdown in enumerate(dropdowns):
+                    try:
+                        select = Select(dropdown)
+                        options = select.options
+                        for option in options:
+                            select.select_by_visible_text(option.text)
+                            logger.info(f"Selected option '{option.text}' from dropdown {idx}.")
+                            time.sleep(args.delay)  # Wait for potential JavaScript updates
+                            # Check for JavaScript changes or errors on the page
+                            page_source = driver.page_source
+                            if "error" in page_source.lower():
+                                logger.warning(f"Error detected after selecting option '{option.text}' from dropdown {idx}.")
+                            else:
+                                logger.info(f"Option '{option.text}' from dropdown {idx} selected successfully without errors.")
+                    except Exception as e:
+                        logger.error(f"Error interacting with dropdown {idx}: {e}")
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
