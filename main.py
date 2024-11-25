@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
+import time
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -56,6 +57,15 @@ def main():
                         logger.error(f"Error submitting form by sending ENTER key: {e}")
                 except Exception as e:
                     logger.error(f"Error clicking submit button: {e}")
+
+            # Look for updated JavaScript text to determine the result of form submission
+            time.sleep(2)  # Wait for potential JavaScript updates
+            page_source = driver.page_source
+            success_message = "Form submitted! No validation errors."
+            if success_message in page_source:
+                logger.info("Form submitted successfully with no validation errors.")
+            else:
+                logger.warning("Form submission may have errors or unexpected behavior. Please review the page for error messages.")
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
