@@ -63,6 +63,12 @@ def main():
                             field.send_keys(payload)
                             logger.info(f"Inserted payload '{payload}' into field {idx}.")
                             time.sleep(args.delay)
+                            # Validate that the payload was successfully entered
+                            entered_value = field.get_attribute("value")
+                            if entered_value == payload:
+                                logger.info(f"Payload '{payload}' successfully entered into field {idx}.")
+                            else:
+                                logger.warning(f"Payload '{payload}' could not be verified in field {idx}. Entered value: '{entered_value}'")
                         except Exception as e:
                             logger.error(f"Error inserting payload into field {idx}: {e}")
 
