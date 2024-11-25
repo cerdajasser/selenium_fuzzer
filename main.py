@@ -42,6 +42,7 @@ def main():
             input_fields = fuzzer.detect_inputs()
             if not input_fields:
                 logger.warning("No input fields detected on the page.")
+                input("Press Enter to close the browser...")  # Keep the browser open until user input
                 return
 
             print("Detected input fields:")
