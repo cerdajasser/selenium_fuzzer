@@ -1,6 +1,7 @@
 import logging
 import argparse
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -35,6 +36,14 @@ def main():
         if args.fuzz_fields:
             payloads = generate_safe_payloads()
             fuzzer.run_fuzz_fields(payloads, delay=args.delay)
+
+            # Submit the form by sending ENTER key
+            for input_element in driver.find_elements_by_tag_name("input"):
+                try:
+                    input_element.send_keys(Keys.ENTER)
+                    logger.info("Sent ENTER key to input element to submit form.")
+                except Exception as e:
+                    logger.error(f"Error sending ENTER key to input element: {e}")
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
