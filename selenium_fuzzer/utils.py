@@ -18,44 +18,6 @@ def scroll_into_view(driver, element: WebElement) -> None:
     driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", element)
 
 
-def get_xpath(element: WebElement) -> str:
-    """Get the XPath of a WebElement by traversing the DOM."""
-    components = []
-    child = element
-    while child is not None:
-        try:
-            # Get the parent element of the current node
-            parent = child.find_element(By.XPATH, "..")
-
-            # Ensure the parent is not the document root or an invalid element
-            if not isinstance(parent, WebElement):
-                break
-
-            # Find siblings with the same tag name to determine the index
-            siblings = parent.find_elements(By.XPATH, child.tag_name)
-
-            if len(siblings) > 1:
-                index = 1
-                for i in range(len(siblings)):
-                    if siblings[i] == child:
-                        index = i + 1
-                        break
-                components.append(f'{child.tag_name}[{index}]')
-            else:
-                components.append(child.tag_name)
-
-            # Move up to the parent for the next iteration
-            child = parent
-
-        except (NoSuchElementException, StaleElementReferenceException) as e:
-            # If we encounter an error getting the parent, break the loop
-            logger.warning(f"Encountered exception while getting parent: {e}")
-            break
-
-    components.reverse()
-    return '/' + '/'.join(components)
-
-
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""
     payloads = []
@@ -125,64 +87,7 @@ def retry_on_stale_element(func):
     return wrapper
 
 
-@retry_on_stale_element
 def is_element_displayed(element: WebElement, driver) -> bool:
     """Check if an element is displayed, with retry logic for stale elements."""
     scroll_into_view(driver, element)  # Scroll into view before checking visibility
     return element.is_displayed()
-
-
-def find_and_interact_with_input(driver, xpath: str, css_selector: str, payload: str) -> None:
-    """Find an input element by XPath or CSS selector and interact with it using a payload."""
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            # Use explicit wait to ensure the element is present using XPath first
-            input_element = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
-            )
-            logger.info(f"Element found using XPath: {xpath}")
-        except TimeoutException:
-            logger.warning(f"Element with XPath {xpath} not found, trying CSS selector. Attempt {attempt + 1} of {max_retries}")
-            try:
-                input_element = WebDriverWait(driver, 20).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, css_selector))
-                )
-                logger.info(f"Element found using CSS selector: {css_selector}")
-            except TimeoutException:
-                logger.error(f"Element with CSS selector {css_selector} not found. Attempt {attempt + 1} of {max_retries}")
-                if attempt < max_retries - 1:
-                    time.sleep(1)
-                    continue
-                else:
-                    logger.error(f"Max retries reached. Could not locate element.")
-                    return
-
-        # Scroll into view and interact with the element
-        scroll_into_view(driver, input_element)
-        try:
-            input_element.clear()
-            input_element.send_keys(payload)
-            logger.info(f"Successfully interacted with element using payload: {payload}")
-            break
-        except StaleElementReferenceException as e:
-            logger.warning(f"StaleElementReferenceException encountered during interaction. Attempt {attempt + 1} of {max_retries}. Error: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(1)
-            else:
-                logger.error(f"Max retries reached. StaleElementReferenceException could not be resolved: {e}")
-                return
-
-
-def find_accessible_elements(driver) -> List[WebElement]:
-    """Find input fields and buttons using standard methods."""
-    accessible_elements = []
-    try:
-        input_elements = driver.find_elements(By.TAG_NAME, "input")
-        button_elements = driver.find_elements(By.TAG_NAME, "button")
-        accessible_elements.extend(input_elements)
-        accessible_elements.extend(button_elements)
-        logger.info(f"Found {len(accessible_elements)} accessible input fields and buttons.")
-    except Exception as e:
-        logger.error(f"Error finding accessible elements: {e}")
-    return accessible_elements
