@@ -10,4 +10,19 @@ class JavaScriptChangeDetector:
         """Check for JavaScript changes or error messages on the page.
         
         Args:
-            success_message (str): The expected success message after changes
+            success_message (str): The expected success message after changes.
+            error_keywords (list of str): Keywords indicating errors on the page.
+            delay (int): Time to wait for JavaScript changes.
+
+        """
+        time.sleep(delay)  # Wait for any JavaScript changes to take effect
+        page_source = self.driver.page_source
+
+        if success_message and success_message in page_source:
+            self.logger.info(f"Success message detected: '{success_message}'")
+        
+        if error_keywords:
+            for error in error_keywords:
+                if error.lower() in page_source.lower():
+                    self.logger.warning(f"Error detected: '{error}'")
+
