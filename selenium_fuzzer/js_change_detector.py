@@ -53,6 +53,14 @@ class JavaScriptChangeDetector:
         except Exception as e:
             self.logger.error(f"Error while detecting red text elements: {e}")
         
+        # Check for updates in the specific validity display element
+        try:
+            validity_display = self.driver.find_element(By.CLASS_NAME, "input-item__validity-display")
+            if validity_display:
+                self.logger.info(f"Validity display updated: {validity_display.text}")
+        except Exception as e:
+            self.logger.error(f"Error while detecting changes in validity display: {e}")
+        
         # Log any changes detected in the console log
         try:
             logs = self.driver.get_log('browser')
