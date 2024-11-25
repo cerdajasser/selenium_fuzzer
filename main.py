@@ -38,8 +38,25 @@ def main():
         fuzzer = Fuzzer(driver)
 
         if args.fuzz_fields:
+            # Prompt the user to select fields to fuzz
+            input_fields = fuzzer.detect_inputs()
+            if not input_fields:
+                logger.warning("No input fields detected on the page.")
+                return
+
+            print("Detected input fields:")
+            for idx, field in enumerate(input_fields):
+                field_type = field.get_attribute("type") or "unknown"
+                field_name = field.get_attribute("name") or "Unnamed"
+                print(f"{idx}: {field_name} (type: {field_type})")
+
+            selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+            selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
             payloads = generate_safe_payloads()
-            fuzzer.run_fuzz_fields(payloads, delay=args.delay)
+            for idx in selected_indices:
+                if 0 <= idx < len(input_fields):
+                    fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
             # Submit the form explicitly
             for form in driver.find_elements(By.TAG_NAME, "form"):
