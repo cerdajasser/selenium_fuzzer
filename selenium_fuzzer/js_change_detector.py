@@ -30,6 +30,8 @@ class JavaScriptChangeDetector:
         # Compare the current page source with the previous one to detect any changes
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
+        else:
+            self.logger.info("No changes detected in the page source.")
         self.previous_page_source = page_source
 
         # Check for success messages
@@ -43,11 +45,11 @@ class JavaScriptChangeDetector:
                 
         # Check for red text on the page as an indicator of potential errors
         try:
-            red_text_elements = self.driver.find_elements(By.XPATH, "//*[contains(@style, 'color: red')]")
+            red_text_elements = self.driver.find_elements(By.XPATH, "//*[contains(@style, 'color: red')] | //*[contains(@class, 'error')] | //*[contains(@class, 'alert')] | //*[contains(@role, 'alert')]")
             if red_text_elements:
-                self.logger.warning("Red text detected on the page, which could indicate an error.")
+                self.logger.warning("Red text or alert detected on the page, which could indicate an error.")
                 for element in red_text_elements:
-                    self.logger.warning(f"Red text content: {element.text}")
+                    self.logger.warning(f"Error content: {element.text}")
         except Exception as e:
             self.logger.error(f"Error while detecting red text elements: {e}")
         
