@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='selenium_fuzzer',
-    version='1.0.0',
+    version='0.0.1',
     author='Jasser Cerda',
     author_email='cerdajasser@gmail.com',
     description='A Selenium-based fuzzer for input fields in Angular Material applications.',
