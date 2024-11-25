@@ -76,6 +76,8 @@ def main():
                                 logger.info(f"Payload '{payload}' successfully entered into field {idx}.")
                             else:
                                 logger.warning(f"Payload '{payload}' could not be verified in field {idx}. Entered value: '{entered_value}'")
+                            # Check for JavaScript changes after input
+                            js_change_detector.check_for_js_changes()
                         except Exception as e:
                             logger.error(f"Error inserting payload into field {idx}: {e}")
 
@@ -95,9 +97,8 @@ def main():
                         logger.error(f"Error submitting form by sending ENTER key: {e}")
                 except Exception as e:
                     logger.error(f"Error clicking submit button: {e}")
-
-            # Look for updated JavaScript text to determine the result of form submission
-            js_change_detector.check_for_js_changes(success_message="Form submitted! No validation errors.")
+                # Check for JavaScript changes after form submission
+                js_change_detector.check_for_js_changes()
 
         if args.check_dropdowns:
             # Find all dropdown menus (select elements)
@@ -114,7 +115,7 @@ def main():
                             logger.info(f"Selected option '{option.text}' from dropdown {idx}.")
                             time.sleep(args.delay)  # Wait for potential JavaScript updates
                             # Check for JavaScript changes or errors on the page
-                            js_change_detector.check_for_js_changes(success_message=f"Option '{option.text}' from dropdown {idx} selected successfully.")
+                            js_change_detector.check_for_js_changes()
                     except Exception as e:
                         logger.error(f"Error interacting with dropdown {idx}: {e}")
 
