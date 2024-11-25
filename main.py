@@ -56,7 +56,15 @@ def main():
             payloads = generate_safe_payloads()
             for idx in selected_indices:
                 if 0 <= idx < len(input_fields):
-                    fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
+                    field = input_fields[idx]
+                    for payload in payloads:
+                        try:
+                            field.clear()
+                            field.send_keys(payload)
+                            logger.info(f"Inserted payload '{payload}' into field {idx}.")
+                            time.sleep(args.delay)
+                        except Exception as e:
+                            logger.error(f"Error inserting payload into field {idx}: {e}")
 
             # Submit the form explicitly
             for form in driver.find_elements(By.TAG_NAME, "form"):
