@@ -8,6 +8,7 @@ class JavaScriptChangeDetector:
     def __init__(self, driver):
         self.driver = driver
         self.logger = logging.getLogger(__name__)
+        self.previous_page_source = ""
 
     def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
         """Check for JavaScript changes or error messages on the page.
@@ -25,6 +26,11 @@ class JavaScriptChangeDetector:
 
         # Capture the current state of the page source
         page_source = self.driver.page_source.lower()
+
+        # Compare the current page source with the previous one to detect any changes
+        if self.previous_page_source and self.previous_page_source != page_source:
+            self.logger.info("Detected changes in the page source.")
+        self.previous_page_source = page_source
 
         # Check for success messages
         if success_message and success_message.lower() in page_source:
@@ -48,7 +54,9 @@ class JavaScriptChangeDetector:
         # Log any changes detected in the console log
         try:
             logs = self.driver.get_log('browser')
+            if not logs:
+                self.logger.info("No console log entries detected.")
             for entry in logs:
-                self.logger.info(f"Console log entry: {entry}")
+                self.logger.info(f"Console log entry: {entry['message']}")
         except Exception as e:
             self.logger.error(f"Error while retrieving console logs: {e}")
