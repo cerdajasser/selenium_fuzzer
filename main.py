@@ -87,6 +87,7 @@ def main():
     except Exception as e:
         logger.error(f"An error occurred: {e}")
     finally:
+        input("Press Enter to close the browser...")  # Keep the browser open until user input
         driver.quit()
 
 if __name__ == "__main__":
