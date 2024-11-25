@@ -62,6 +62,7 @@ def main():
                             field.clear()
                             field.send_keys(payload)
                             field.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
+                            field.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
                             logger.info(f"Inserted payload '{payload}' into field {idx}.")
                             time.sleep(args.delay)
                             # Validate that the payload was successfully entered
