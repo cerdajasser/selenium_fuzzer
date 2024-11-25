@@ -24,7 +24,7 @@ def main():
         chrome_options.add_argument("--headless")
 
     # Initialize the WebDriver
-    driver = webdriver.Chrome(executable_path=Config.CHROMEDRIVER_PATH, options=chrome_options)
+    driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
     try:
         driver.get(args.url)
