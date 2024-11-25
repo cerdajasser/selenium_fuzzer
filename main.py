@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
+from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 import time
 
 def main():
@@ -32,6 +33,8 @@ def main():
 
     # Initialize the WebDriver
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
+
+    js_change_detector = JavaScriptChangeDetector(driver)
 
     try:
         driver.get(args.url)
@@ -94,13 +97,7 @@ def main():
                     logger.error(f"Error clicking submit button: {e}")
 
             # Look for updated JavaScript text to determine the result of form submission
-            time.sleep(2)  # Wait for potential JavaScript updates
-            page_source = driver.page_source
-            success_message = "Form submitted! No validation errors."
-            if success_message in page_source:
-                logger.info("Form submitted successfully with no validation errors.")
-            else:
-                logger.warning("Form submission may have errors or unexpected behavior. Please review the page for error messages.")
+            js_change_detector.check_for_js_changes(success_message="Form submitted! No validation errors.")
 
         if args.check_dropdowns:
             # Find all dropdown menus (select elements)
@@ -117,11 +114,7 @@ def main():
                             logger.info(f"Selected option '{option.text}' from dropdown {idx}.")
                             time.sleep(args.delay)  # Wait for potential JavaScript updates
                             # Check for JavaScript changes or errors on the page
-                            page_source = driver.page_source
-                            if "error" in page_source.lower():
-                                logger.warning(f"Error detected after selecting option '{option.text}' from dropdown {idx}.")
-                            else:
-                                logger.info(f"Option '{option.text}' from dropdown {idx} selected successfully without errors.")
+                            js_change_detector.check_for_js_changes(success_message=f"Option '{option.text}' from dropdown {idx} selected successfully.")
                     except Exception as e:
                         logger.error(f"Error interacting with dropdown {idx}: {e}")
 
