@@ -2,6 +2,9 @@ import logging
 import argparse
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -37,13 +40,22 @@ def main():
             payloads = generate_safe_payloads()
             fuzzer.run_fuzz_fields(payloads, delay=args.delay)
 
-            # Submit the form by sending ENTER key
-            for input_element in driver.find_elements_by_tag_name("input"):
+            # Submit the form explicitly
+            for form in driver.find_elements(By.TAG_NAME, "form"):
                 try:
-                    input_element.send_keys(Keys.ENTER)
-                    logger.info("Sent ENTER key to input element to submit form.")
+                    submit_button = form.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
+                    submit_button.click()
+                    logger.info("Clicked submit button to submit form.")
+                except NoSuchElementException:
+                    try:
+                        # If no submit button, try sending ENTER key to any input field in the form
+                        input_element = form.find_element(By.XPATH, ".//input")
+                        input_element.send_keys(Keys.ENTER)
+                        logger.info("Sent ENTER key to input element to submit form.")
+                    except Exception as e:
+                        logger.error(f"Error submitting form by sending ENTER key: {e}")
                 except Exception as e:
-                    logger.error(f"Error sending ENTER key to input element: {e}")
+                    logger.error(f"Error clicking submit button: {e}")
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
