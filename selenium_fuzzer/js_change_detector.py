@@ -94,6 +94,12 @@ class JavaScriptChangeDetector:
                     }} else if (mutation.type === 'attributes') {{
                         console.log('The ' + mutation.attributeName + ' attribute was modified.');
                     }}
+                    // Extracting status and data values if available
+                    if (mutation.target && mutation.target.innerHTML) {{
+                        var status = 200; // Example status, replace with actual if needed
+                        var data = mutation.target.innerHTML;
+                        console.log('Remote response: status=' + status + ' | data=' + data);
+                    }}
                 }});
             }};
             var observer = new MutationObserver(callback);
