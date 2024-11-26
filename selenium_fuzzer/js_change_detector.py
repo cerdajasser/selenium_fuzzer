@@ -137,3 +137,40 @@ class JavaScriptChangeDetector:
 
         # Clear the logs after retrieval
         self.driver.execute_script("window.updatedTextLogs = [];")
+
+    def poll_for_changes(self, polling_interval=2, max_attempts=10):
+        """Periodically poll the page source to check for any changes.
+
+        Args:
+            polling_interval (int): Interval between polling attempts in seconds.
+            max_attempts (int): Maximum number of polling attempts.
+        """
+        for attempt in range(max_attempts):
+            time.sleep(polling_interval)
+            current_page_source = self.driver.page_source.lower()
+            if self.previous_page_source and self.previous_page_source != current_page_source:
+                self.logger.info("Detected changes during polling.")
+                self.console_logger.info("Detected changes during polling.")
+                self._log_updated_text()
+                self.previous_page_source = current_page_source
+                break
+            else:
+                self.logger.debug(f"Polling attempt {attempt + 1}: No changes detected.")
+
+    def compare_element_text(self, element_locator, previous_text=""):
+        """Compare the text content of a specific element to detect changes.
+
+        Args:
+            element_locator (tuple): Locator tuple to find the element (e.g., (By.ID, 'element_id')).
+            previous_text (str): The previous text content to compare against.
+        """
+        try:
+            element = self.driver.find_element(*element_locator)
+            current_text = element.text.strip()
+            if current_text and current_text != previous_text:
+                self.console_logger.info(f"Element text updated: {current_text}")
+                return current_text
+            return previous_text
+        except Exception as e:
+            self.logger.error(f"Error comparing element text: {e}")
+            return previous_text
