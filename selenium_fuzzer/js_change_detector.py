@@ -1,6 +1,9 @@
 import logging
 import time
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 class JavaScriptChangeDetector:
     def __init__(self, driver):
@@ -44,3 +47,39 @@ class JavaScriptChangeDetector:
         for keyword in error_keywords:
             if keyword in page_source:
                 self.logger.warning(f"Error detected: keyword '{keyword}' found on the page.")
+
+    def observe_element_changes(self, element_locator, timeout=10):
+        """Observe specific elements for changes using Selenium's explicit waits.
+
+        Args:
+            element_locator (tuple): Locator tuple to find the element (e.g., (By.ID, 'element_id')).
+            timeout (int): Time in seconds to wait for the element to change.
+        """
+        try:
+            WebDriverWait(self.driver, timeout).until(EC.staleness_of(self.driver.find_element(*element_locator)))
+            self.logger.info("Detected a change in the targeted element.")
+        except TimeoutException:
+            self.logger.info("No change detected in the targeted element within the timeout period.")
+
+    def add_mutation_observer(self, target_selector):
+        """Inject JavaScript to add a MutationObserver to the target element.
+
+        Args:
+            target_selector (str): CSS selector for the target element to observe.
+        """
+        script = f"""
+        var targetNode = document.querySelector('{target_selector}');
+        if (targetNode) {{
+            var config = {{ attributes: true, childList: true, subtree: true }};
+            var callback = function(mutationsList, observer) {{
+                console.log('Mutation detected:', mutationsList);
+            }};
+            var observer = new MutationObserver(callback);
+            observer.observe(targetNode, config);
+            console.log('MutationObserver added to target node: {target_selector}');
+        }} else {{
+            console.log('Target node not found: {target_selector}');
+        }}
+        """
+        self.driver.execute_script(script)
+        self.logger.info(f"MutationObserver added to target element: {target_selector}")
