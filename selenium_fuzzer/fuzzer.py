@@ -1,7 +1,6 @@
 import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector):
