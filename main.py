@@ -10,6 +10,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
+from selenium_fuzzer.fuzzer import Fuzzer
 import time
 
 def main():
