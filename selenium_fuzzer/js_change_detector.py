@@ -74,6 +74,11 @@ class JavaScriptChangeDetector:
             var callback = function(mutationsList, observer) {{
                 mutationsList.forEach(function(mutation) {{
                     console.log('Mutation detected:', mutation);
+                    if (mutation.type === 'childList') {{
+                        console.log('A child node has been added or removed.');
+                    }} else if (mutation.type === 'attributes') {{
+                        console.log('The ' + mutation.attributeName + ' attribute was modified.');
+                    }}
                 }});
             }};
             var observer = new MutationObserver(callback);
@@ -85,3 +90,11 @@ class JavaScriptChangeDetector:
         """
         self.driver.execute_script(script)
         self.logger.info(f"MutationObserver added to target element: {target_selector}")
+
+    def add_observers_for_dynamic_elements(self):
+        """Add mutation observers to elements that are known to change dynamically."""
+        # Add observer for the validity display span
+        self.add_mutation_observer(".input-item__validity-display")
+        # Add observer for the form controls that might change dynamically
+        self.add_mutation_observer(".input-item__controls")
+        self.add_mutation_observer(".input-item__display-input")
