@@ -20,6 +20,9 @@ class JavaScriptChangeDetector:
         self.console_logger.addHandler(console_handler)
         self.console_logger.setLevel(logging.INFO)
 
+        # Initialize JavaScript log storage on the page
+        self._initialize_js_logging()
+
     def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
         """Check for JavaScript changes or error messages on the page.
 
@@ -92,11 +95,11 @@ class JavaScriptChangeDetector:
                     if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {{
                         mutation.addedNodes.forEach(function(node) {{
                             if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) {{
-                                console.log('Updated text: ' + node.textContent.trim());
+                                window.updatedTextLogs.push(node.textContent.trim());
                             }}
                         }});
                     }} else if (mutation.type === 'attributes') {{
-                        console.log('The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName));
+                        window.updatedTextLogs.push('The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName));
                     }}
                 }});
             }};
@@ -119,12 +122,18 @@ class JavaScriptChangeDetector:
         self.add_mutation_observer(".input-item__controls")
         self.add_mutation_observer(".input-item__display-input")
 
+    def _initialize_js_logging(self):
+        """Initialize JavaScript logging to store updates in a global variable."""
+        script = "window.updatedTextLogs = [];"
+        self.driver.execute_script(script)
+
     def _log_updated_text(self):
         """Retrieve updated text logged by JavaScript and log it to the console."""
         script = "return window.updatedTextLogs || [];"
         updated_text_logs = self.driver.execute_script(script)
         for log in updated_text_logs:
-            self.console_logger.info(f"Updated text detected: {log}")
+            if log:  # Only log non-empty changes
+                self.console_logger.info(f"Updated text detected: {log}")
 
         # Clear the logs after retrieval
         self.driver.execute_script("window.updatedTextLogs = [];")
