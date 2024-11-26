@@ -139,9 +139,9 @@ class JavaScriptChangeDetector:
         updated_text_logs = self.driver.execute_script(script)
         if updated_text_logs:
             self.console_logger.info("Logging detected changes:")
-        for log in updated_text_logs:
-            if log:  # Only log non-empty changes
-                self.console_logger.info(f"Updated text detected: {log}")
+            for log in updated_text_logs:
+                if log:  # Only log non-empty changes
+                    self.console_logger.info(f"Updated text detected: {log}")
 
         # Clear the logs after retrieval
         self.driver.execute_script("window.updatedTextLogs = [];")
