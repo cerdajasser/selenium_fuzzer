@@ -72,7 +72,9 @@ class JavaScriptChangeDetector:
         if (targetNode) {{
             var config = {{ attributes: true, childList: true, subtree: true }};
             var callback = function(mutationsList, observer) {{
-                console.log('Mutation detected:', mutationsList);
+                mutationsList.forEach(function(mutation) {{
+                    console.log('Mutation detected:', mutation);
+                }});
             }};
             var observer = new MutationObserver(callback);
             observer.observe(targetNode, config);
