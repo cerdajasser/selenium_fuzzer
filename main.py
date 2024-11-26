@@ -6,10 +6,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
+from selenium_fuzzer.fuzzer import Fuzzer
 import time
 
 def main():
