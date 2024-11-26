@@ -125,6 +125,8 @@ class JavaScriptChangeDetector:
         # Add observer for the form controls that might change dynamically
         self.add_mutation_observer(".input-item__controls")
         self.add_mutation_observer(".input-item__display-input")
+        # Add observer for changes in the <pre> tag
+        self.add_mutation_observer("pre")
 
     def _initialize_js_logging(self):
         """Initialize JavaScript logging to store updates in a global variable."""
