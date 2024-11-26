@@ -45,6 +45,7 @@ class JavaScriptChangeDetector:
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
             self.console_logger.info("Detected changes in the page source.")
+            self._log_updated_text()  # Log the updated text from JavaScript changes
         else:
             self.logger.info("No changes detected in the page source.")
             self.console_logger.info("No changes detected in the page source.")
@@ -117,3 +118,13 @@ class JavaScriptChangeDetector:
         # Add observer for the form controls that might change dynamically
         self.add_mutation_observer(".input-item__controls")
         self.add_mutation_observer(".input-item__display-input")
+
+    def _log_updated_text(self):
+        """Retrieve updated text logged by JavaScript and log it to the console."""
+        script = "return window.updatedTextLogs || [];"
+        updated_text_logs = self.driver.execute_script(script)
+        for log in updated_text_logs:
+            self.console_logger.info(f"Updated text detected: {log}")
+
+        # Clear the logs after retrieval
+        self.driver.execute_script("window.updatedTextLogs = [];")
