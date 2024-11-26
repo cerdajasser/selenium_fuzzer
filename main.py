@@ -34,13 +34,15 @@ def main():
     # Initialize the WebDriver
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
+    # Create JavaScriptChangeDetector instance
     js_change_detector = JavaScriptChangeDetector(driver)
 
     try:
         driver.get(args.url)
         logger.info(f"Accessing URL: {args.url}")
 
-        fuzzer = Fuzzer(driver)
+        # Pass JavaScriptChangeDetector instance to Fuzzer
+        fuzzer = Fuzzer(driver, js_change_detector)
 
         if args.fuzz_fields:
             # Prompt the user to select fields to fuzz

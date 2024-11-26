@@ -1,15 +1,13 @@
 import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 
 class Fuzzer:
-    def __init__(self, driver):
+    def __init__(self, driver, js_change_detector):
         self.driver = driver
         self.logger = logging.getLogger(__name__)
-        self.js_change_detector = JavaScriptChangeDetector(driver)
+        self.js_change_detector = js_change_detector
 
     def detect_inputs(self):
         """Detect all input fields on the page."""
