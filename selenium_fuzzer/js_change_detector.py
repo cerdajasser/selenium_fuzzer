@@ -45,6 +45,7 @@ class JavaScriptChangeDetector:
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
             self.console_logger.info("Detected changes in the page source.")
+            self.console_logger.info(f"Updated page source: {page_source}")
         else:
             self.logger.info("No changes detected in the page source.")
             self.console_logger.info("No changes detected in the page source.")
@@ -99,6 +100,7 @@ class JavaScriptChangeDetector:
                         var status = 200; // Example status, replace with actual if needed
                         var data = mutation.target.innerHTML;
                         console.log('Remote response: status=' + status + ' | data=' + data);
+                        console.log('Updated text: ' + data);
                     }}
                 }});
             }};
