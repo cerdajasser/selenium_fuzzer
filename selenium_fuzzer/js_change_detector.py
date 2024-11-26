@@ -8,7 +8,6 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as E
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
-from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 import time
 
 def main():
