@@ -1,66 +1,65 @@
 import logging
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
-import time
-from selenium_fuzzer.utils import generate_safe_payloads, retry_on_stale_element, scroll_into_view
-from typing import List
-
-logger = logging.getLogger(__name__)
+from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 
 class Fuzzer:
     def __init__(self, driver):
         self.driver = driver
+        self.logger = logging.getLogger(__name__)
+        self.js_change_detector = JavaScriptChangeDetector(driver)
 
-    def detect_inputs(self) -> List[WebElement]:
-        """Detect all potential input fields and buttons on the page."""
-        input_fields = []
+    def detect_inputs(self):
+        """Detect all input fields on the page."""
         try:
-            # Detect <input> elements
-            input_elements = self.driver.find_elements(By.TAG_NAME, "input")
-            textarea_elements = self.driver.find_elements(By.TAG_NAME, "textarea")
-            button_elements = self.driver.find_elements(By.TAG_NAME, "button")
-
-            input_fields.extend(input_elements)
-            input_fields.extend(textarea_elements)
-            input_fields.extend(button_elements)
-
-            logger.info(f"Found {len(input_fields)} input fields, textareas, and buttons.")
+            input_fields = self.driver.find_elements(By.TAG_NAME, "input")
+            self.logger.info(f"Found {len(input_fields)} input elements.")
+            return input_fields
         except Exception as e:
-            logger.error(f"Error detecting input elements: {e}")
-        return input_fields
+            self.logger.error(f"Error detecting input fields: {e}")
+            return []
 
-    @retry_on_stale_element
-    def interact_with_element(self, element: WebElement, payload: str) -> None:
-        """Interact with a given element by sending a payload."""
-        try:
-            scroll_into_view(self.driver, element)
-            if element.tag_name in ["input", "textarea"]:
-                element.clear()
-                element.send_keys(payload)
-                logger.info(f"Successfully interacted with input/textarea using payload: {payload}")
-            elif element.tag_name == "button":
-                element.click()
-                logger.info("Successfully clicked button.")
-        except StaleElementReferenceException as e:
-            logger.error(f"Error interacting with element: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error interacting with element: {e}")
+    def fuzz_field(self, input_element, payloads, delay=1):
+        """Fuzz a given input field with a list of payloads.
+        
+        Args:
+            input_element (WebElement): The input field to fuzz.
+            payloads (list): The payloads to input into the field.
+            delay (int): Time in seconds to wait between fuzzing attempts.
+        """
+        for payload in payloads:
+            try:
+                input_element.clear()
+                input_element.send_keys(payload)
+                input_element.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
+                input_element.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
+                self.logger.info(f"Inserted payload '{payload}' into field {input_element.get_attribute('name') or 'Unnamed'}.")
+                self.js_change_detector.check_for_js_changes(delay=delay)
+            except Exception as e:
+                self.logger.error(f"Error fuzzing with payload '{payload}': {e}")
 
-    def run_fuzz_fields(self, payloads: List[str], delay: int = 1) -> None:
-        """Run fuzzing on detected input fields with provided payloads."""
+    def run_fuzz_fields(self, delay=1):
+        """Detect and fuzz all input fields on the page."""
         input_fields = self.detect_inputs()
         if not input_fields:
-            logger.warning("No input fields detected on the page.")
+            self.logger.warning("No input fields detected on the page.")
             return
 
-        for element in input_fields:
-            for payload in payloads:
-                try:
-                    self.interact_with_element(element, payload)
-                    time.sleep(delay)
-                except Exception as e:
-                    logger.error(f"Error during fuzzing interaction: {e}")
-                    continue
+        payloads = ["test@example.com", "1234567890", "<script>alert('XSS')</script>", "\' OR 1=1 --"]
+        for input_element in input_fields:
+            self.fuzz_field(input_element, payloads, delay)
+
+    def run_click_elements(self, delay=1):
+        """Detect and click all clickable elements on the page."""
+        clickable_elements = self.driver.find_elements(By.XPATH, "//button | //a | //input[@type='button'] | //input[@type='submit']")
+        self.logger.info(f"Found {len(clickable_elements)} clickable elements.")
+
+        for element in clickable_elements:
+            try:
+                self.logger.info(f"Clicking on element: {element.text or element.get_attribute('name') or element.get_attribute('type')}")
+                element.click()
+                self.js_change_detector.check_for_js_changes(delay=delay)
+            except Exception as e:
+                self.logger.error(f"Error clicking element: {e}")
