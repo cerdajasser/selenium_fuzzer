@@ -25,6 +25,9 @@ def main():
     logging.basicConfig(level=Config.LOG_LEVEL, filename=Config.LOG_FILE, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
 
     # Set up Chrome options
     chrome_options = webdriver.ChromeOptions()
@@ -37,12 +40,14 @@ def main():
     js_change_detector = JavaScriptChangeDetector(driver)
 
     try:
+        logger.info("Starting the Selenium Fuzzer...")
         driver.get(args.url)
         logger.info(f"Accessing URL: {args.url}")
 
         fuzzer = Fuzzer(driver)
 
         if args.fuzz_fields:
+            logger.info("Fuzzing input fields on the page...")
             # Prompt the user to select fields to fuzz
             input_fields = fuzzer.detect_inputs()
             if not input_fields:
@@ -101,6 +106,7 @@ def main():
                 js_change_detector.check_for_js_changes()
 
         if args.check_dropdowns:
+            logger.info("Checking dropdown menus on the page...")
             # Find all dropdown menus (select elements)
             dropdowns = driver.find_elements(By.TAG_NAME, "select")
             if not dropdowns:
