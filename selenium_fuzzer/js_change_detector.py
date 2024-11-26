@@ -95,11 +95,14 @@ class JavaScriptChangeDetector:
                     if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {{
                         mutation.addedNodes.forEach(function(node) {{
                             if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) {{
+                                console.log('Mutation detected: ' + node.textContent.trim());
                                 window.updatedTextLogs.push(node.textContent.trim());
                             }}
                         }});
                     }} else if (mutation.type === 'attributes') {{
-                        window.updatedTextLogs.push('The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName));
+                        var updatedAttribute = 'The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName);
+                        console.log(updatedAttribute);
+                        window.updatedTextLogs.push(updatedAttribute);
                     }}
                 }});
             }};
