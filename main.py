@@ -6,18 +6,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
-from selenium_fuzzer.fuzzer import Fuzzer
-
 import time
 
 def main():
-    # Import here to avoid circular import issues
-    from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
-    from selenium_fuzzer.fuzzer import Fuzzer
-
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
     parser.add_argument("url", help="The URL to run the fuzzer against.")
     parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
@@ -39,15 +34,13 @@ def main():
     # Initialize the WebDriver
     driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
-    # Create JavaScriptChangeDetector instance
     js_change_detector = JavaScriptChangeDetector(driver)
 
     try:
         driver.get(args.url)
         logger.info(f"Accessing URL: {args.url}")
 
-        # Pass JavaScriptChangeDetector instance to Fuzzer
-        fuzzer = Fuzzer(driver, js_change_detector)
+        fuzzer = Fuzzer(driver)
 
         if args.fuzz_fields:
             # Prompt the user to select fields to fuzz
@@ -94,6 +87,14 @@ def main():
                     submit_button = form.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
                     submit_button.click()
                     logger.info("Clicked submit button to submit form.")
+                except NoSuchElementException:
+                    try:
+                        # If no submit button, try sending ENTER key to any input field in the form
+                        input_element = form.find_element(By.XPATH, ".//input")
+                        input_element.send_keys(Keys.ENTER)
+                        logger.info("Sent ENTER key to input element to submit form.")
+                    except Exception as e:
+                        logger.error(f"Error submitting form by sending ENTER key: {e}")
                 except Exception as e:
                     logger.error(f"Error clicking submit button: {e}")
                 # Check for JavaScript changes after form submission
