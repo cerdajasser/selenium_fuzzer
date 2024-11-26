@@ -89,14 +89,6 @@ def main():
                     submit_button = form.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
                     submit_button.click()
                     logger.info("Clicked submit button to submit form.")
-                except NoSuchElementException:
-                    try:
-                        # If no submit button, try sending ENTER key to any input field in the form
-                        input_element = form.find_element(By.XPATH, ".//input")
-                        input_element.send_keys(Keys.ENTER)
-                        logger.info("Sent ENTER key to input element to submit form.")
-                    except Exception as e:
-                        logger.error(f"Error submitting form by sending ENTER key: {e}")
                 except Exception as e:
                     logger.error(f"Error clicking submit button: {e}")
                 # Check for JavaScript changes after form submission
