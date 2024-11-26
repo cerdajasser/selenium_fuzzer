@@ -45,7 +45,6 @@ class JavaScriptChangeDetector:
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
             self.console_logger.info("Detected changes in the page source.")
-            self.console_logger.info(f"Updated page source: {page_source}")
         else:
             self.logger.info("No changes detected in the page source.")
             self.console_logger.info("No changes detected in the page source.")
@@ -89,18 +88,14 @@ class JavaScriptChangeDetector:
             var config = {{ attributes: true, childList: true, subtree: true }};
             var callback = function(mutationsList, observer) {{
                 mutationsList.forEach(function(mutation) {{
-                    console.log('Mutation detected:', mutation);
-                    if (mutation.type === 'childList') {{
-                        console.log('A child node has been added or removed.');
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {{
+                        mutation.addedNodes.forEach(function(node) {{
+                            if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) {{
+                                console.log('Updated text: ' + node.textContent.trim());
+                            }}
+                        }});
                     }} else if (mutation.type === 'attributes') {{
-                        console.log('The ' + mutation.attributeName + ' attribute was modified.');
-                    }}
-                    // Extracting status and data values if available
-                    if (mutation.target && mutation.target.innerHTML) {{
-                        var status = 200; // Example status, replace with actual if needed
-                        var data = mutation.target.innerHTML;
-                        console.log('Remote response: status=' + status + ' | data=' + data);
-                        console.log('Updated text: ' + data);
+                        console.log('The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName));
                     }}
                 }});
             }};
