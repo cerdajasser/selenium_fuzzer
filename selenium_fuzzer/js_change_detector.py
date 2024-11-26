@@ -1,97 +1,129 @@
 import logging
-import time
+import argparse
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium_fuzzer.fuzzer import Fuzzer
+from selenium_fuzzer.utils import generate_safe_payloads
+from selenium_fuzzer.config import Config
+from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
+import time
 
-class JavaScriptChangeDetector:
-    def __init__(self, driver):
-        self.driver = driver
-        self.logger = logging.getLogger(__name__)
-        self.previous_page_source = ""
+def main():
+    parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
+    parser.add_argument("url", help="The URL to run the fuzzer against.")
+    parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
+    parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
+    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
+    parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
+    args = parser.parse_args()
 
-    def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
-        """Check for JavaScript changes or error messages on the page.
-        
-        Args:
-            success_message (str): The expected success message after changes are applied.
-            error_keywords (list of str): List of keywords indicating errors.
-            delay (int): Time in seconds to wait for changes to appear.
-        """
-        if error_keywords is None:
-            error_keywords = ["error", "failed", "invalid"]
-        
-        # Wait for potential changes on the page
-        time.sleep(delay)
+    # Set up logging
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=Config.LOG_FILE, 
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
 
-        # Capture the current state of the page source
-        page_source = self.driver.page_source.lower()
+    # Set up Chrome options
+    chrome_options = webdriver.ChromeOptions()
+    if args.headless:
+        chrome_options.add_argument("--headless")
 
-        # Compare the current page source with the previous one to detect any changes
-        if self.previous_page_source and self.previous_page_source != page_source:
-            self.logger.info("Detected changes in the page source.")
-        else:
-            self.logger.info("No changes detected in the page source.")
-        self.previous_page_source = page_source
+    # Initialize the WebDriver
+    driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
-        # Check for success messages
-        if success_message and success_message.lower() in page_source:
-            self.logger.info(f"Success message detected: '{success_message}'")
-        
-        # Check for error keywords in the page source
-        for keyword in error_keywords:
-            if keyword in page_source:
-                self.logger.warning(f"Error detected: keyword '{keyword}' found on the page.")
-                
-        # Check for red text on the page as an indicator of potential errors
-        try:
-            red_text_elements = self.driver.find_elements(By.XPATH, "//*[contains(@style, 'color: red')] | //*[contains(@class, 'error')] | //*[contains(@class, 'alert')] | //*[contains(@role, 'alert')]")
-            if red_text_elements:
-                self.logger.warning("Red text or alert detected on the page, which could indicate an error.")
-                for element in red_text_elements:
-                    self.logger.warning(f"Error content: {element.text}")
-        except Exception as e:
-            self.logger.error(f"Error while detecting red text elements: {e}")
-        
-        # Check for updates in the specific validity display element
-        try:
-            validity_display = self.driver.find_element(By.CLASS_NAME, "input-item__validity-display")
-            if validity_display:
-                self.logger.info(f"Validity display updated: {validity_display.text}")
-        except Exception as e:
-            self.logger.error(f"Error while detecting changes in validity display: {e}")
-        
-        # Check for updates in the input pattern attribute
-        try:
-            input_element = self.driver.find_element(By.CLASS_NAME, "input-item__display-input")
-            pattern = input_element.get_attribute("pattern")
-            if pattern:
-                self.logger.info(f"Input pattern attribute updated: {pattern}")
-        except Exception as e:
-            self.logger.error(f"Error while detecting changes in input pattern attribute: {e}")
-        
-        # Log any changes detected in the console log
-        try:
-            logs = self.driver.get_log('browser')
-            if not logs:
-                self.logger.info("No console log entries detected.")
-            for entry in logs:
-                self.logger.info(f"Console log entry: {entry['message']}")
-        except Exception as e:
-            self.logger.error(f"Error while retrieving console logs: {e}")
-        
-        # Check for changes after selecting an option or clicking the submit button
-        try:
-            submit_button = self.driver.find_element(By.CLASS_NAME, "input-item__submit-button")
-            if submit_button:
-                self.logger.info("Submit button interaction detected. Monitoring for changes.")
-                submit_button.click()
-                time.sleep(delay)
-                self.logger.info("Re-checking page after submit button interaction.")
-                new_page_source = self.driver.page_source.lower()
-                if self.previous_page_source != new_page_source:
-                    self.logger.info("Changes detected after submit button interaction.")
-                else:
-                    self.logger.info("No changes detected after submit button interaction.")
-        except Exception as e:
-            self.logger.error(f"Error while detecting changes after submit button interaction: {e}")
+    js_change_detector = JavaScriptChangeDetector(driver)
+
+    try:
+        driver.get(args.url)
+        logger.info(f"Accessing URL: {args.url}")
+
+        fuzzer = Fuzzer(driver)
+
+        if args.fuzz_fields:
+            # Prompt the user to select fields to fuzz
+            input_fields = fuzzer.detect_inputs()
+            if not input_fields:
+                logger.warning("No input fields detected on the page.")
+                return
+
+            print("Detected input fields:")
+            for idx, field in enumerate(input_fields):
+                field_type = field.get_attribute("type") or "unknown"
+                field_name = field.get_attribute("name") or "Unnamed"
+                print(f"{idx}: {field_name} (type: {field_type})")
+
+            selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+            selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+            payloads = generate_safe_payloads()
+            for idx in selected_indices:
+                if 0 <= idx < len(input_fields):
+                    field = input_fields[idx]
+                    for payload in payloads:
+                        try:
+                            field.clear()
+                            field.send_keys(payload)
+                            field.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
+                            field.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
+                            logger.info(f"Inserted payload '{payload}' into field {idx}.")
+                            time.sleep(args.delay)
+                            # Validate that the payload was successfully entered
+                            entered_value = field.get_attribute("value")
+                            if entered_value == payload:
+                                logger.info(f"Payload '{payload}' successfully entered into field {idx}.")
+                            else:
+                                logger.warning(f"Payload '{payload}' could not be verified in field {idx}. Entered value: '{entered_value}'")
+                            # Check for JavaScript changes after input
+                            js_change_detector.check_for_js_changes()
+                        except Exception as e:
+                            logger.error(f"Error inserting payload into field {idx}: {e}")
+
+            # Submit the form explicitly
+            for form in driver.find_elements(By.TAG_NAME, "form"):
+                try:
+                    submit_button = form.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
+                    submit_button.click()
+                    logger.info("Clicked submit button to submit form.")
+                except NoSuchElementException:
+                    try:
+                        # If no submit button, try sending ENTER key to any input field in the form
+                        input_element = form.find_element(By.XPATH, ".//input")
+                        input_element.send_keys(Keys.ENTER)
+                        logger.info("Sent ENTER key to input element to submit form.")
+                    except Exception as e:
+                        logger.error(f"Error submitting form by sending ENTER key: {e}")
+                except Exception as e:
+                    logger.error(f"Error clicking submit button: {e}")
+                # Check for JavaScript changes after form submission
+                js_change_detector.check_for_js_changes()
+
+        if args.check_dropdowns:
+            # Find all dropdown menus (select elements)
+            dropdowns = driver.find_elements(By.TAG_NAME, "select")
+            if not dropdowns:
+                logger.warning("No dropdown menus detected on the page.")
+            else:
+                for idx, dropdown in enumerate(dropdowns):
+                    try:
+                        select = Select(dropdown)
+                        options = select.options
+                        for option in options:
+                            select.select_by_visible_text(option.text)
+                            logger.info(f"Selected option '{option.text}' from dropdown {idx}.")
+                            time.sleep(args.delay)  # Wait for potential JavaScript updates
+                            # Check for JavaScript changes or errors on the page
+                            js_change_detector.check_for_js_changes()
+                    except Exception as e:
+                        logger.error(f"Error interacting with dropdown {idx}: {e}")
+
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+    finally:
+        input("Press Enter to close the browser...")  # Keep the browser open until user input
+        driver.quit()
+
+if __name__ == "__main__":
+    main()
