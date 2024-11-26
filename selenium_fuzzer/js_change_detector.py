@@ -61,6 +61,15 @@ class JavaScriptChangeDetector:
         except Exception as e:
             self.logger.error(f"Error while detecting changes in validity display: {e}")
         
+        # Check for updates in the input pattern attribute
+        try:
+            input_element = self.driver.find_element(By.CLASS_NAME, "input-item__display-input")
+            pattern = input_element.get_attribute("pattern")
+            if pattern:
+                self.logger.info(f"Input pattern attribute updated: {pattern}")
+        except Exception as e:
+            self.logger.error(f"Error while detecting changes in input pattern attribute: {e}")
+        
         # Log any changes detected in the console log
         try:
             logs = self.driver.get_log('browser')
@@ -70,3 +79,19 @@ class JavaScriptChangeDetector:
                 self.logger.info(f"Console log entry: {entry['message']}")
         except Exception as e:
             self.logger.error(f"Error while retrieving console logs: {e}")
+        
+        # Check for changes after selecting an option or clicking the submit button
+        try:
+            submit_button = self.driver.find_element(By.CLASS_NAME, "input-item__submit-button")
+            if submit_button:
+                self.logger.info("Submit button interaction detected. Monitoring for changes.")
+                submit_button.click()
+                time.sleep(delay)
+                self.logger.info("Re-checking page after submit button interaction.")
+                new_page_source = self.driver.page_source.lower()
+                if self.previous_page_source != new_page_source:
+                    self.logger.info("Changes detected after submit button interaction.")
+                else:
+                    self.logger.info("No changes detected after submit button interaction.")
+        except Exception as e:
+            self.logger.error(f"Error while detecting changes after submit button interaction: {e}")
