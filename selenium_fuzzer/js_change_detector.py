@@ -25,6 +25,10 @@ class JavaScriptChangeDetector:
         # Capture the current state of the page source
         page_source = self.driver.page_source.lower()
 
+        # Log the lengths of previous and current page sources for debugging purposes
+        self.logger.debug(f"Previous page source length: {len(self.previous_page_source)}")
+        self.logger.debug(f"Current page source length: {len(page_source)}")
+
         # Compare the current page source with the previous one to detect any changes
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
