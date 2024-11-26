@@ -8,11 +8,13 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
-from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
-from selenium_fuzzer.fuzzer import Fuzzer
 import time
 
 def main():
+    # Import here to avoid circular import issues
+    from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
+    from selenium_fuzzer.fuzzer import Fuzzer
+
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
     parser.add_argument("url", help="The URL to run the fuzzer against.")
     parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
