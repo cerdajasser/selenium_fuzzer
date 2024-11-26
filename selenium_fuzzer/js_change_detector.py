@@ -95,8 +95,9 @@ class JavaScriptChangeDetector:
                     if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {{
                         mutation.addedNodes.forEach(function(node) {{
                             if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) {{
-                                console.log('Mutation detected: ' + node.textContent.trim());
-                                window.updatedTextLogs.push(node.textContent.trim());
+                                var logMessage = 'Mutation detected: ' + node.textContent.trim();
+                                console.log(logMessage);
+                                window.updatedTextLogs.push(logMessage);
                             }}
                         }});
                     }} else if (mutation.type === 'attributes') {{
@@ -134,6 +135,8 @@ class JavaScriptChangeDetector:
         """Retrieve updated text logged by JavaScript and log it to the console."""
         script = "return window.updatedTextLogs || [];"
         updated_text_logs = self.driver.execute_script(script)
+        if updated_text_logs:
+            self.console_logger.info("Logging detected changes:")
         for log in updated_text_logs:
             if log:  # Only log non-empty changes
                 self.console_logger.info(f"Updated text detected: {log}")
