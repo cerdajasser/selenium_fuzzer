@@ -41,18 +41,18 @@ def main():
     js_change_detector = JavaScriptChangeDetector(driver)
 
     try:
-        logger.info("Starting the Selenium Fuzzer...")
+        logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
-        logger.info(f"Accessing URL: {args.url}")
+        logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
         fuzzer = Fuzzer(driver, js_change_detector)
 
         if args.fuzz_fields:
-            logger.info("Fuzzing input fields on the page...")
+            logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
             # Prompt the user to select fields to fuzz
             input_fields = fuzzer.detect_inputs()
             if not input_fields:
-                logger.warning("No input fields detected on the page.")
+                logger.warning("\n!!! No input fields detected on the page.\n")
                 return
 
             print("Detected input fields:")
@@ -74,44 +74,44 @@ def main():
                             field.send_keys(payload)
                             field.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
                             field.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
-                            logger.info(f"Inserted payload '{payload}' into field {idx}.")
+                            logger.info(f"\n>>> Inserted Payload: '{payload}' into Field {idx}\n")
                             time.sleep(args.delay)
                             # Validate that the payload was successfully entered
                             entered_value = field.get_attribute("value")
                             if entered_value == payload:
-                                logger.info(f"Payload '{payload}' successfully entered into field {idx}.")
+                                logger.info(f"\n>>> Payload '{payload}' successfully entered into field {idx}.\n")
                             else:
-                                logger.warning(f"Payload '{payload}' could not be verified in field {idx}. Entered value: '{entered_value}'")
+                                logger.warning(f"\n!!! Payload Verification Failed: '{payload}' in Field {idx}. Entered Value: '{entered_value}'\n")
                             # Check for JavaScript changes after input
                             js_change_detector.check_for_js_changes()
                         except Exception as e:
-                            logger.error(f"Error inserting payload into field {idx}: {e}")
+                            logger.error(f"\n!!! Error Inserting Payload into Field {idx}: {e}\n")
 
             # Submit the form explicitly
             for form in driver.find_elements(By.TAG_NAME, "form"):
                 try:
                     submit_button = form.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
                     submit_button.click()
-                    logger.info("Clicked submit button to submit form.")
+                    logger.info("\n>>> Clicked submit button to submit form.\n")
                 except NoSuchElementException:
                     try:
                         # If no submit button, try sending ENTER key to any input field in the form
                         input_element = form.find_element(By.XPATH, ".//input")
                         input_element.send_keys(Keys.ENTER)
-                        logger.info("Sent ENTER key to input element to submit form.")
+                        logger.info("\n>>> Sent ENTER key to input element to submit form.\n")
                     except Exception as e:
-                        logger.error(f"Error submitting form by sending ENTER key: {e}")
+                        logger.error(f"\n!!! Error submitting form by sending ENTER key: {e}\n")
                 except Exception as e:
-                    logger.error(f"Error clicking submit button: {e}")
+                    logger.error(f"\n!!! Error clicking submit button: {e}\n")
                 # Check for JavaScript changes after form submission
                 js_change_detector.check_for_js_changes()
 
         if args.check_dropdowns:
-            logger.info("Checking dropdown menus on the page...")
+            logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             # Find all dropdown menus (select elements)
             dropdowns = driver.find_elements(By.TAG_NAME, "select")
             if not dropdowns:
-                logger.warning("No dropdown menus detected on the page.")
+                logger.warning("\n!!! No dropdown menus detected on the page.\n")
             else:
                 for idx, dropdown in enumerate(dropdowns):
                     try:
@@ -119,15 +119,15 @@ def main():
                         options = select.options
                         for option in options:
                             select.select_by_visible_text(option.text)
-                            logger.info(f"Selected option '{option.text}' from dropdown {idx}.")
+                            logger.info(f"\n>>> Selected Option: '{option.text}' from Dropdown {idx}\n")
                             time.sleep(args.delay)  # Wait for potential JavaScript updates
                             # Check for JavaScript changes or errors on the page
                             js_change_detector.check_for_js_changes()
                     except Exception as e:
-                        logger.error(f"Error interacting with dropdown {idx}: {e}")
+                        logger.error(f"\n!!! Error Interacting with Dropdown {idx}: {e}\n")
 
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"\n!!! An Error Occurred: {e}\n")
     finally:
         input("Press Enter to close the browser...")  # Keep the browser open until user input
         driver.quit()
