@@ -89,7 +89,7 @@ class JavaScriptChangeDetector:
         script = f"""
         var targetNode = document.querySelector('{target_selector}');
         if (targetNode) {{
-            var config = {{ attributes: true, childList: true, subtree: true }};
+            var config = {{ attributes: true, childList: true, subtree: true, characterData: true }};
             var callback = function(mutationsList, observer) {{
                 mutationsList.forEach(function(mutation) {{
                     if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {{
@@ -104,6 +104,10 @@ class JavaScriptChangeDetector:
                         var updatedAttribute = 'The ' + mutation.attributeName + ' attribute was modified. Updated value: ' + mutation.target.getAttribute(mutation.attributeName);
                         console.log(updatedAttribute);
                         window.updatedTextLogs.push(updatedAttribute);
+                    }} else if (mutation.type === 'characterData') {{
+                        var charDataMessage = 'Character data changed: ' + mutation.target.data;
+                        console.log(charDataMessage);
+                        window.updatedTextLogs.push(charDataMessage);
                     }}
                 }});
             }};

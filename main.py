@@ -75,27 +75,7 @@ def main():
                 payloads = generate_safe_payloads()
                 for idx in selected_indices:
                     if 0 <= idx < len(input_fields):
-                        field = input_fields[idx]
-                        for payload in payloads:
-                            try:
-                                field.clear()
-                                field.send_keys(payload)
-                                field.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
-                                field.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
-                                logger.info(f"\n>>> Inserted Payload: '{payload}' into Field {idx}\n")
-                                time.sleep(args.delay)
-                                # Validate that the payload was successfully entered
-                                entered_value = field.get_attribute("value")
-                                if entered_value == payload:
-                                    logger.info(f"\n>>> Payload '{payload}' successfully entered into field {idx}.\n")
-                                else:
-                                    logger.warning(f"\n!!! Payload Verification Failed: '{payload}' in Field {idx}. Entered Value: '{entered_value}'\n")
-                                # Check for JavaScript changes after input
-                                js_change_detector.check_for_js_changes()
-                            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
-                                logger.error(f"\n!!! Error Inserting Payload into Field {idx}: {e}\n")
-                            except Exception as e:
-                                logger.error(f"\n!!! Unexpected Error Inserting Payload into Field {idx}: {e}\n")
+                        fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during input fuzzing: {e}\n")
@@ -105,25 +85,7 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                dropdowns = driver.find_elements(By.TAG_NAME, "select")
-                if not dropdowns:
-                    logger.warning("\n!!! No dropdown menus detected on the page.\n")
-                else:
-                    for idx, dropdown in enumerate(dropdowns):
-                        try:
-                            select = Select(dropdown)
-                            options = select.options
-                            for option in options:
-                                select.select_by_visible_text(option.text)
-                                logger.info(f"\n>>> Selected Option: '{option.text}' from Dropdown {idx}\n")
-                                time.sleep(args.delay)  # Wait for potential JavaScript updates
-                                # Check for JavaScript changes or errors on the page
-                                js_change_detector.check_for_js_changes()
-                        except (NoSuchElementException, TimeoutException, WebDriverException) as e:
-                            logger.error(f"\n!!! Error Interacting with Dropdown {idx}: {e}\n")
-                        except Exception as e:
-                            logger.error(f"\n!!! Unexpected Error with Dropdown {idx}: {e}\n")
-
+                fuzzer.detect_dropdowns()
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:
