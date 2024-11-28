@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from urllib.parse import urlparse
 import time
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url):
@@ -22,7 +23,7 @@ class Fuzzer:
         """
         parsed_url = urlparse(self.url)
         domain = parsed_url.netloc.replace(":", "_").replace(".", "_")  # Replace dots and colons for filename compatibility
-        log_filename = f"fuzzing_log_{domain}.log"
+        log_filename = f"fuzzing_log_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log"
 
         logger = logging.getLogger(f"fuzzer_{domain}")
         logger.setLevel(logging.DEBUG)
@@ -70,14 +71,36 @@ class Fuzzer:
         """
         for payload in payloads:
             try:
+                # Try clearing the input in multiple ways
                 input_element.clear()
-                input_element.send_keys(payload)
-                input_element.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
-                input_element.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
-                self.logger.info(f"Inserted payload '{payload}' into field {input_element.get_attribute('name') or 'Unnamed'}.")
+                input_element.send_keys(Keys.CONTROL, 'a')
+                input_element.send_keys(Keys.BACKSPACE)
+                
+                # Set value using JavaScript
+                self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
+                
+                # Send TAB and ENTER to trigger potential JavaScript events
+                input_element.send_keys(Keys.TAB)
+                input_element.send_keys(Keys.ENTER)
+
+                # Wait to allow JavaScript to process changes
+                time.sleep(delay)
+
+                # Verify the value using JavaScript
+                entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
+
+                if entered_value == payload:
+                    self.logger.info(f"\n>>> Payload '{payload}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.\n")
+                else:
+                    self.logger.warning(f"\n!!! Payload Verification Failed: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'\n")
+
+                # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
+
+            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
+                self.logger.error(f"\n!!! Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
             except Exception as e:
-                self.logger.error(f"Error fuzzing with payload '{payload}': {e}")
+                self.logger.error(f"\n!!! Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
 
     def detect_dropdowns(self):
         """
