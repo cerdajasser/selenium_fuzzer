@@ -131,7 +131,8 @@ class Fuzzer:
                 self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
                 return
 
-            for dropdown_element in dropdown_elements:
+            for idx, dropdown_element in enumerate(dropdown_elements):
+                self.logger.info(f"\n>>> Interacting with dropdown {idx + 1} on the page.")
                 self.fuzz_dropdown(dropdown_element, delay)
 
         except Exception as e:
@@ -151,9 +152,9 @@ class Fuzzer:
             for index, option in enumerate(options):
                 # Select each option by index
                 select.select_by_index(index)
-                self.logger.info(f"Selected option: {option.text}")
+                self.logger.info(f"\n>>> Selected option '{option.text}' from dropdown.")
                 time.sleep(delay)  # Add a delay for each selection to observe any changes
-                self.analyze_response()
+                self.js_change_detector.check_for_js_changes(delay=delay)
         except Exception as e:
             self.logger.error(f"Error fuzzing dropdown: {e}")
 
