@@ -13,8 +13,7 @@ class JavaScriptChangeDetector:
 
         # Set up console handler for logging important information
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        console_formatter = CustomFormatter()
         console_handler.setFormatter(console_formatter)
         self.console_logger = logging.getLogger('console_logger')
         self.console_logger.addHandler(console_handler)
@@ -40,30 +39,22 @@ class JavaScriptChangeDetector:
         # Capture the current state of the page source
         page_source = self.driver.page_source.lower()
 
-        # Log the lengths of previous and current page sources for debugging purposes
-        self.logger.debug(f"Previous page source length: {len(self.previous_page_source)}")
-        self.logger.debug(f"Current page source length: {len(page_source)}")
-
         # Compare the current page source with the previous one to detect any changes
         if self.previous_page_source and self.previous_page_source != page_source:
-            self.logger.info("Detected changes in the page source.")
-            self.console_logger.info("Detected changes in the page source.")
+            self.console_logger.info("🔄 Page changes detected!")
             self._log_updated_text()  # Log the updated text from JavaScript changes
         else:
-            self.logger.info("No changes detected in the page source.")
-            self.console_logger.info("No changes detected in the page source.")
+            self.console_logger.info("✅ No changes detected on the page.")
         self.previous_page_source = page_source
 
         # Check for success messages
         if success_message and success_message.lower() in page_source:
-            self.logger.info(f"Success message detected: '{success_message}'")
-            self.console_logger.info(f"Success message detected: '{success_message}'")
+            self.console_logger.info(f"🟢 Success: Found the message '{success_message}' on the page.")
 
         # Check for error keywords in the page source
         for keyword in error_keywords:
             if keyword in page_source:
-                self.logger.warning(f"Error detected: keyword '{keyword}' found on the page.")
-                self.console_logger.warning(f"Error detected: keyword '{keyword}' found on the page.")
+                self.console_logger.warning(f"⚠️ Warning: Keyword '{keyword}' found on the page!")
 
     def observe_element_changes(self, element_locator, timeout=10):
         """Observe specific elements for changes using Selenium's explicit waits.
@@ -74,11 +65,9 @@ class JavaScriptChangeDetector:
         """
         try:
             WebDriverWait(self.driver, timeout).until(EC.staleness_of(self.driver.find_element(*element_locator)))
-            self.logger.info("Detected a change in the targeted element.")
-            self.console_logger.info("Detected a change in the targeted element.")
+            self.console_logger.info("🔄 Detected a change in the targeted element.")
         except TimeoutException:
-            self.logger.info("No change detected in the targeted element within the timeout period.")
-            self.console_logger.info("No change detected in the targeted element within the timeout period.")
+            self.console_logger.info("⏱️ No change detected in the targeted element within the timeout period.")
 
     def add_mutation_observer(self, target_selector):
         """Inject JavaScript to add a MutationObserver to the target element.
@@ -119,8 +108,7 @@ class JavaScriptChangeDetector:
         }}
         """
         self.driver.execute_script(script)
-        self.logger.info(f"MutationObserver added to target element: {target_selector}")
-        self.console_logger.info(f"MutationObserver added to target element: {target_selector}")
+        self.console_logger.info(f"👀 MutationObserver added to target element: {target_selector}")
 
     def add_observers_for_dynamic_elements(self):
         """Add mutation observers to elements that are known to change dynamically."""
@@ -142,10 +130,10 @@ class JavaScriptChangeDetector:
         script = "return window.updatedTextLogs || [];"
         updated_text_logs = self.driver.execute_script(script)
         if updated_text_logs:
-            self.console_logger.info("Logging detected changes:")
+            self.console_logger.info("📋 Logging detected changes:")
             for log in updated_text_logs:
                 if log:  # Only log non-empty changes
-                    self.console_logger.info(f"Updated text detected: {log}")
+                    self.console_logger.info(f"  ➜ {log}")
 
         # Clear the logs after retrieval
         self.driver.execute_script("window.updatedTextLogs = [];")
@@ -161,13 +149,12 @@ class JavaScriptChangeDetector:
             time.sleep(polling_interval)
             current_page_source = self.driver.page_source.lower()
             if self.previous_page_source and self.previous_page_source != current_page_source:
-                self.logger.info("Detected changes during polling.")
-                self.console_logger.info("Detected changes during polling.")
+                self.console_logger.info("🔄 Detected changes during polling.")
                 self._log_updated_text()
                 self.previous_page_source = current_page_source
                 break
             else:
-                self.logger.debug(f"Polling attempt {attempt + 1}: No changes detected.")
+                self.console_logger.debug(f"Polling attempt {attempt + 1}: No changes detected.")
 
     def compare_element_text(self, element_locator, previous_text=""):
         """Compare the text content of a specific element to detect changes.
@@ -180,9 +167,33 @@ class JavaScriptChangeDetector:
             element = self.driver.find_element(*element_locator)
             current_text = element.text.strip()
             if current_text and current_text != previous_text:
-                self.console_logger.info(f"Element text updated: {current_text}")
+                self.console_logger.info(f"🔄 Element text updated: {current_text}")
                 return current_text
             return previous_text
         except Exception as e:
             self.logger.error(f"Error comparing element text: {e}")
             return previous_text
+
+class CustomFormatter(logging.Formatter):
+    """Custom Formatter for making console logs more human-readable."""
+
+    grey = "\x1b[38;20m"
+    green = "\x1b[32;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(levelname)s - %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: green + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno, self.format)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
