@@ -169,5 +169,5 @@ if __name__ == "__main__":
     js_change_detector = JSChangeDetector(driver)
 
     # Instantiate and run the fuzzer
-    fuzzer = Fuzzer(driver, js_change_detector, "https://example.com")
+    fuzzer = Fuzzer(driver, js_change_detector, url="https://example.com")
     fuzzer.run_fuzz(delay=1)
