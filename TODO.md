@@ -1,8 +1,8 @@
 # TODO: Selenium Fuzzer Project Improvements
 
-## 1. Improved Error and Exception Handling
-- [ ] **Retry Mechanism**: Implement a retry mechanism if certain elements (e.g., buttons or dropdowns) are not found immediately, which could be useful for dynamic web pages.
-- [ ] **Graceful Exit**: Improve the handling of exceptions to ensure that when an error occurs, the script gracefully quits and outputs helpful debug information.
+## 1. ~~Improved Error and Exception Handling~~
+- ~~**Retry Mechanism**: Implement a retry mechanism if certain elements (e.g., buttons or dropdowns) are not found immediately, which could be useful for dynamic web pages.~~
+- ~~**Graceful Exit**: Improve the handling of exceptions to ensure that when an error occurs, the script gracefully quits and outputs helpful debug information.~~
 
 ## 2. Parallelization for Efficiency
 - [ ] **Parallel Browsing**: Utilize threading or asynchronous code to run multiple instances of fuzzing in parallel, which will reduce the time required for fuzzing large websites.
