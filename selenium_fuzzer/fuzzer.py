@@ -69,30 +69,42 @@ class Fuzzer:
             payloads (list): The payloads to input into the field.
             delay (int): Time in seconds to wait between fuzzing attempts.
         """
+        MAX_RETRIES = 3
+
         for payload in payloads:
             try:
-                # Try clearing the input in multiple ways
-                input_element.clear()
-                input_element.send_keys(Keys.CONTROL, 'a')
-                input_element.send_keys(Keys.BACKSPACE)
-                
-                # Set value using JavaScript
-                self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
-                
-                # Send TAB and ENTER to trigger potential JavaScript events
-                input_element.send_keys(Keys.TAB)
-                input_element.send_keys(Keys.ENTER)
+                retry_count = 0
+                success = False
 
-                # Wait to allow JavaScript to process changes
-                time.sleep(delay)
+                while retry_count < MAX_RETRIES and not success:
+                    # Try clearing the input multiple ways
+                    input_element.clear()
+                    input_element.send_keys(Keys.CONTROL, 'a')
+                    input_element.send_keys(Keys.DELETE)
+                    
+                    # Set value using JavaScript multiple times to ensure it's set properly
+                    self.driver.execute_script("arguments[0].value = '';", input_element)
+                    self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
+                    
+                    # Send TAB and ENTER to trigger potential events
+                    input_element.send_keys(Keys.TAB)
+                    input_element.send_keys(Keys.ENTER)
 
-                # Verify the value using JavaScript
-                entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
+                    # Wait to allow JavaScript to process changes
+                    time.sleep(delay)
 
-                if entered_value == payload:
+                    # Verify the value using JavaScript
+                    entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
+
+                    if entered_value == payload:
+                        success = True
+                    else:
+                        retry_count += 1
+
+                if success:
                     self.logger.info(f"\n>>> Payload '{payload}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.\n")
                 else:
-                    self.logger.warning(f"\n!!! Payload Verification Failed: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'\n")
+                    self.logger.warning(f"\n!!! Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'\n")
 
                 # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
