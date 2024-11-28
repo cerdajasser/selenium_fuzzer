@@ -1,11 +1,12 @@
 import logging
 import os
-from selenium.webdriver.support.ui import Select
+import time
+from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from urllib.parse import urlparse
-import time
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from urllib.parse import urlparse
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url):
@@ -114,19 +115,31 @@ class Fuzzer:
             except Exception as e:
                 self.logger.error(f"\n!!! Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
 
-    def detect_dropdowns(self):
+    def detect_dropdowns(self, delay=10):
         """
         Detect dropdown elements in the specific div and interact with them.
         """
         try:
-            # Locate the dropdown elements using the specific div ID
-            container = self.driver.find_element(By.ID, "prductsize")
+            # Wait for the dropdown container to be present
+            wait = WebDriverWait(self.driver, delay)
+            container = wait.until(EC.presence_of_element_located((By.ID, "prductsize")))
+
+            # Locate the dropdown elements within the container
             dropdown_elements = container.find_elements(By.TAG_NAME, "select")
             self.logger.info(f"Found {len(dropdown_elements)} dropdown elements in 'prductsize'.")
+
             for dropdown_element in dropdown_elements:
                 self.fuzz_dropdown(dropdown_element)
+
+        except TimeoutException:
+            self.logger.error("Error detecting dropdowns: Element with ID 'prductsize' was not found within the timeout period.")
+            self.console_logger.error("⚠️ Timeout Error: Could not find the dropdown container within the given time.")
+        except NoSuchElementException as e:
+            self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"⚠️ Element Not Found: {e}")
         except Exception as e:
             self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"⚠️ Unexpected Error while detecting dropdowns: {e}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
@@ -155,41 +168,13 @@ class Fuzzer:
         # Placeholder method to analyze the response after selecting each option
         pass
 
-    def run_fuzz_fields(self, delay=1):
-        """
-        Detect and fuzz all input fields on the page.
-        """
-        input_fields = self.detect_inputs()
-        if not input_fields:
-            self.logger.warning("No input fields detected on the page.")
-            return
-
-        payloads = ["test@example.com", "1234567890", "<script>alert('XSS')</script>", "' OR 1=1 --"]
-        for input_element in input_fields:
-            self.fuzz_field(input_element, payloads, delay)
-
-    def run_click_elements(self, delay=1):
-        """
-        Detect and click all clickable elements on the page.
-        """
-        clickable_elements = self.driver.find_elements(By.XPATH, "//button | //a | //input[@type='button'] | //input[@type='submit']")
-        self.logger.info(f"Found {len(clickable_elements)} clickable elements.")
-
-        for element in clickable_elements:
-            try:
-                self.logger.info(f"Clicking on element: {element.text or element.get_attribute('name') or element.get_attribute('type')}")
-                element.click()
-                self.js_change_detector.check_for_js_changes(delay=delay)
-            except Exception as e:
-                self.logger.error(f"Error clicking element: {e}")
-
     def run_fuzz(self, delay=1):
         """
         Main method to run the fuzzing operation, including input fields, dropdowns, and clickable elements.
         """
         try:
             self.run_fuzz_fields(delay)
-            self.detect_dropdowns()
+            self.detect_dropdowns(delay)
             self.run_click_elements(delay)
         finally:
             self.driver.quit()

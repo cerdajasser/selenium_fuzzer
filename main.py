@@ -1,18 +1,14 @@
 import logging
 import argparse
 import os
+import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
-import time
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -77,7 +73,7 @@ def main():
                     if 0 <= idx < len(input_fields):
                         fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
-            except (NoSuchElementException, TimeoutException) as e:
+            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
                 logger.error(f"\n!!! Error during input fuzzing: {e}\n")
             except Exception as e:
                 logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
@@ -85,8 +81,8 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.detect_dropdowns()
-            except (NoSuchElementException, TimeoutException) as e:
+                fuzzer.detect_dropdowns(delay=args.delay)  # Pass in the delay to wait for the dropdown elements
+            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:
                 logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
