@@ -77,13 +77,13 @@ class Fuzzer:
                 success = False
 
                 while retry_count < MAX_RETRIES and not success:
-                    # Try clearing the input multiple ways
-                    input_element.clear()
-                    input_element.send_keys(Keys.CONTROL, 'a')
-                    input_element.send_keys(Keys.DELETE)
-                    
-                    # Set value using JavaScript multiple times to ensure it's set properly
+                    # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
+                    
+                    # Wait a moment to ensure JavaScript clearing is complete
+                    time.sleep(0.5)
+
+                    # Set value using JavaScript to avoid front-end interference
                     self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
                     
                     # Send TAB and ENTER to trigger potential events
