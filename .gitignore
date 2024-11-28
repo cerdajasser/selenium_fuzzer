@@ -28,5 +28,5 @@ env/
 .DS_Store
 
 #suble project files
-selenium_fuzzer.sublime-project
-selenium_fuzzer.sublime-workspace
+*.sublime-project
+*.sublime-workspace
