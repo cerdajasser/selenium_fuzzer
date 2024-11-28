@@ -3,7 +3,6 @@ import argparse
 import os
 import time
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -17,6 +16,7 @@ def main():
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
+    parser.add_argument("--dropdown-selector", type=str, default="select", help="CSS selector for the dropdown menus to be fuzzed.")
     args = parser.parse_args()
 
     # Set up logging with dynamic filename in the /log folder
@@ -81,7 +81,7 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.detect_dropdowns(delay=args.delay)  # Pass in the delay to wait for the dropdown elements
+                fuzzer.detect_dropdowns(selector=args.dropdown_selector, delay=args.delay)  # Pass in the custom selector
             except (NoSuchElementException, TimeoutException, WebDriverException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:

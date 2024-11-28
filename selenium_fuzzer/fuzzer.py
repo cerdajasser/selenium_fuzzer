@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.common.by import By
@@ -115,26 +114,26 @@ class Fuzzer:
             except Exception as e:
                 self.logger.error(f"\n!!! Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
 
-    def detect_dropdowns(self, delay=10):
+    def detect_dropdowns(self, selector="select", delay=10):
         """
-        Detect dropdown elements in the specific div and interact with them.
+        Detect dropdown elements using the provided selector and interact with them.
+        
+        Args:
+            selector (str): CSS selector to locate dropdowns.
+            delay (int): Time in seconds to wait between dropdown interactions.
         """
         try:
-            # Wait for the dropdown container to be present
-            wait = WebDriverWait(self.driver, delay)
-            container = wait.until(EC.presence_of_element_located((By.ID, "prductsize")))
+            # Locate dropdown elements using the provided CSS selector
+            dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
 
-            # Locate the dropdown elements within the container
-            dropdown_elements = container.find_elements(By.TAG_NAME, "select")
-            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements in 'prductsize'.")
+            if not dropdown_elements:
+                self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
+                return
 
             for dropdown_element in dropdown_elements:
-                self.fuzz_dropdown(dropdown_element)
+                self.fuzz_dropdown(dropdown_element, delay)
 
-        except TimeoutException:
-            self.logger.error("Error detecting dropdowns: Element with ID 'prductsize' was not found within the timeout period.")
-        except NoSuchElementException as e:
-            self.logger.error(f"Error detecting dropdowns: {e}")
         except Exception as e:
             self.logger.error(f"Error detecting dropdowns: {e}")
 
@@ -171,7 +170,7 @@ class Fuzzer:
         """
         try:
             self.run_fuzz_fields(delay)
-            self.detect_dropdowns(delay)
+            self.detect_dropdowns(delay=delay)
             self.run_click_elements(delay)
         finally:
             self.driver.quit()
