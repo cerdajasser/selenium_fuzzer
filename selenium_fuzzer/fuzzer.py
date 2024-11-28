@@ -24,7 +24,7 @@ class Fuzzer:
         domain = parsed_url.netloc.replace(":", "_").replace(".", "_")  # Replace dots and colons for filename compatibility
         log_filename = f"fuzzing_log_{domain}.log"
 
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(f"fuzzer_{domain}")
         logger.setLevel(logging.DEBUG)
 
         # Create a file handler for the logger
@@ -41,7 +41,7 @@ class Fuzzer:
         console_handler.setFormatter(formatter)
 
         # Add handlers to the logger
-        if not logger.handlers:  # Avoid adding multiple handlers if the logger already has them
+        if not any(isinstance(handler, logging.FileHandler) and handler.baseFilename == file_handler.baseFilename for handler in logger.handlers):  # Avoid adding multiple handlers if the logger already has them
             logger.addHandler(file_handler)
             logger.addHandler(console_handler)
 
