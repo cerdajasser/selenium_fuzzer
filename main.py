@@ -45,7 +45,8 @@ def main():
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        fuzzer = Fuzzer(driver, js_change_detector)
+        # Instantiate the Fuzzer with the provided URL
+        fuzzer = Fuzzer(driver, js_change_detector, args.url)
 
         if args.fuzz_fields:
             logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
