@@ -22,8 +22,9 @@ def main():
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     args = parser.parse_args()
 
-    # Set up logging
-    logging.basicConfig(level=Config.LOG_LEVEL, filename=Config.LOG_FILE, 
+    # Set up logging with dynamic filename
+    log_filename = f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log"
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     console_handler = logging.StreamHandler()
