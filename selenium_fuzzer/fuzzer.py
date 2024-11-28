@@ -133,13 +133,10 @@ class Fuzzer:
 
         except TimeoutException:
             self.logger.error("Error detecting dropdowns: Element with ID 'prductsize' was not found within the timeout period.")
-            self.console_logger.error("⚠️ Timeout Error: Could not find the dropdown container within the given time.")
         except NoSuchElementException as e:
             self.logger.error(f"Error detecting dropdowns: {e}")
-            self.console_logger.error(f"⚠️ Element Not Found: {e}")
         except Exception as e:
             self.logger.error(f"Error detecting dropdowns: {e}")
-            self.console_logger.error(f"⚠️ Unexpected Error while detecting dropdowns: {e}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
