@@ -1,5 +1,6 @@
 import logging
 import argparse
+import os
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -22,8 +23,13 @@ def main():
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     args = parser.parse_args()
 
-    # Set up logging with dynamic filename
-    log_filename = f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log"
+    # Ensure the log folder exists
+    log_folder = "log"
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
+    # Set up logging with dynamic filename in the /log folder
+    log_filename = os.path.join(log_folder, f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
     logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
