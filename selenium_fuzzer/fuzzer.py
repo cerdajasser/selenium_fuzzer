@@ -1,62 +1,73 @@
-import logging
+from selenium import webdriver
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+import time
 
 class Fuzzer:
-    def __init__(self, driver, js_change_detector):
-        self.driver = driver
-        self.logger = logging.getLogger(__name__)
-        self.js_change_detector = js_change_detector
-
-    def detect_inputs(self):
-        """Detect all input fields on the page."""
-        try:
-            input_fields = self.driver.find_elements(By.TAG_NAME, "input")
-            self.logger.info(f"Found {len(input_fields)} input elements.")
-            return input_fields
-        except Exception as e:
-            self.logger.error(f"Error detecting input fields: {e}")
-            return []
-
-    def fuzz_field(self, input_element, payloads, delay=1):
-        """Fuzz a given input field with a list of payloads.
-        
-        Args:
-            input_element (WebElement): The input field to fuzz.
-            payloads (list): The payloads to input into the field.
-            delay (int): Time in seconds to wait between fuzzing attempts.
+    def __init__(self, url: str, headless: bool = False):
         """
-        for payload in payloads:
-            try:
-                input_element.clear()
-                input_element.send_keys(payload)
-                input_element.send_keys(Keys.TAB)  # Trigger potential JavaScript events after input
-                input_element.send_keys(Keys.ENTER)  # Explicitly hit enter after tabbing
-                self.logger.info(f"Inserted payload '{payload}' into field {input_element.get_attribute('name') or 'Unnamed'}.")
-                self.js_change_detector.check_for_js_changes(delay=delay)
-            except Exception as e:
-                self.logger.error(f"Error fuzzing with payload '{payload}': {e}")
+        Initialize the Fuzzer with a given URL and headless option.
+        """
+        self.url = url
+        self.headless = headless
+        self.driver = self.create_driver()
+        
+    def create_driver(self):
+        """
+        Create and configure the Selenium WebDriver instance.
+        """
+        options = webdriver.ChromeOptions()
+        if self.headless:
+            options.add_argument('--headless')
+        driver = webdriver.Chrome(options=options)
+        driver.get(self.url)
+        return driver
 
-    def run_fuzz_fields(self, delay=1):
-        """Detect and fuzz all input fields on the page."""
-        input_fields = self.detect_inputs()
-        if not input_fields:
-            self.logger.warning("No input fields detected on the page.")
-            return
+    def detect_dropdowns(self):
+        """
+        Detect dropdown elements in the form and interact with them.
+        """
+        try:
+            # Locate the dropdown elements using the div ID
+            dropdown_elements = self.driver.find_elements(By.TAG_NAME, "select")
+            for dropdown_element in dropdown_elements:
+                self.fuzz_dropdown(dropdown_element)
+        except Exception as e:
+            print(f"Error detecting dropdowns: {e}")
 
-        payloads = ["test@example.com", "1234567890", "<script>alert('XSS')</script>", "\' OR 1=1 --"]
-        for input_element in input_fields:
-            self.fuzz_field(input_element, payloads, delay)
+    def fuzz_dropdown(self, dropdown_element):
+        """
+        Interact with a dropdown element by selecting each option.
+        """
+        try:
+            select = Select(dropdown_element)
+            options = select.options
+            for index, option in enumerate(options):
+                # Select each option by index
+                select.select_by_index(index)
+                print(f"Selected option: {option.text}")
+                time.sleep(1)  # Add a delay for each selection to observe any changes
+                self.analyze_response()
+        except Exception as e:
+            print(f"Error fuzzing dropdown: {e}")
 
-    def run_click_elements(self, delay=1):
-        """Detect and click all clickable elements on the page."""
-        clickable_elements = self.driver.find_elements(By.XPATH, "//button | //a | //input[@type='button'] | //input[@type='submit']")
-        self.logger.info(f"Found {len(clickable_elements)} clickable elements.")
+    def analyze_response(self):
+        """
+        Analyze the response of the dropdown interaction.
+        """
+        # Placeholder method to analyze the response after selecting each option
+        pass
 
-        for element in clickable_elements:
-            try:
-                self.logger.info(f"Clicking on element: {element.text or element.get_attribute('name') or element.get_attribute('type')}")
-                element.click()
-                self.js_change_detector.check_for_js_changes(delay=delay)
-            except Exception as e:
-                self.logger.error(f"Error clicking element: {e}")
+    def run_fuzz(self):
+        """
+        Main method to run the fuzzing operation.
+        """
+        try:
+            self.detect_dropdowns()
+        finally:
+            self.driver.quit()
+
+# Example usage
+if __name__ == "__main__":
+    fuzzer = Fuzzer("https://example.com", headless=True)
+    fuzzer.run_fuzz()
