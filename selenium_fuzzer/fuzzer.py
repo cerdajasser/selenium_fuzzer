@@ -4,11 +4,10 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, ElementNotInteractableException
 from urllib.parse import urlparse
 import difflib  # For comparing page sources
 from selenium.webdriver.remote.webelement import WebElement
-
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url, track_state=True):
@@ -62,7 +61,6 @@ class Fuzzer:
         Detect all suitable input fields on the page.
         """
         try:
-            # Detect all input fields
             input_fields = self.driver.find_elements(By.TAG_NAME, "input")
 
             # Filter the fields to include only those suitable for text input
@@ -94,6 +92,12 @@ class Fuzzer:
                 success = False
 
                 while retry_count < MAX_RETRIES and not success:
+                    # Check if the element is interactable before fuzzing
+                    if not input_element.is_displayed() or not input_element.is_enabled():
+                        self.logger.warning(f"Field '{input_element.get_attribute('name') or 'Unnamed'}' is not interactable. Skipping.")
+                        self.console_logger.warning(f"⚠️ Field '{input_element.get_attribute('name') or 'Unnamed'}' is not interactable. Skipping.")
+                        return
+
                     # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == "")
@@ -124,7 +128,7 @@ class Fuzzer:
                 self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 
-            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
+            except (NoSuchElementException, TimeoutException, WebDriverException, ElementNotInteractableException) as e:
                 self.logger.error(f"Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
             except Exception as e:
@@ -135,48 +139,28 @@ class Fuzzer:
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
-    def detect_dropdowns(self, selector="select", delay=10):
-        try:
-            dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
-            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
-
-            if not dropdown_elements:
-                self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
-                self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
-                return
-
-            for idx, dropdown_element in enumerate(dropdown_elements):
-                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
-                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
-                self.fuzz_dropdown(dropdown_element, delay)
-
-        except Exception as e:
-            self.logger.error(f"Error detecting dropdowns: {e}")
-            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
-
-    def fuzz_dropdown(self, dropdown_element, delay=1):
-        try:
-            select = Select(dropdown_element)
-            options = select.options
-            for index, option in enumerate(options):
-                select.select_by_index(index)
-                self.logger.info(f"Selected option '{option.text}' from dropdown.")
-                self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
-                WebDriverWait(self.driver, delay).until(lambda d: True)
-                self.js_change_detector.check_for_js_changes(delay=delay)
-                self.js_change_detector.capture_js_console_logs()
-
-        except Exception as e:
-            self.logger.error(f"Error fuzzing dropdown: {e}")
-            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
-
     def run_fuzz_fields(self, delay=1):
         try:
             input_fields = self.detect_inputs()
-            for input_element in input_fields:
-                payloads = ["test@example.com", "123456", "' OR 1=1 --"]
-                self.fuzz_field(input_element, payloads, delay)
+            if not input_fields:
+                self.logger.warning("No suitable input fields detected for fuzzing.")
+                self.console_logger.warning("⚠️ No suitable input fields detected for fuzzing.")
+                return
+
+            print("Detected input fields:")
+            for idx, field in enumerate(input_fields):
+                field_type = field.get_attribute("type") or "unknown"
+                field_name = field.get_attribute("name") or "Unnamed"
+                print(f"{idx}: {field_name} (type: {field_type})")
+
+            selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+            selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+            payloads = ["test@example.com", "123456", "' OR 1=1 --"]
+
+            for idx in selected_indices:
+                if 0 <= idx < len(input_fields):
+                    self.fuzz_field(input_fields[idx], payloads, delay)
         except Exception as e:
             self.logger.error(f"Unexpected error during input fuzzing: {e}")
             self.console_logger.error(f"❌ Unexpected error during input fuzzing: {e}")
@@ -185,6 +169,5 @@ class Fuzzer:
         try:
             self.run_fuzz_fields(delay)
             self.detect_dropdowns(delay=delay)
-            self.run_click_elements(delay)
         finally:
             self.driver.quit()
