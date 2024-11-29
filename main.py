@@ -2,6 +2,12 @@ import logging
 import argparse
 import os
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
@@ -57,11 +63,38 @@ def main():
 
         if args.fuzz_fields:
             logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
-            fuzzer.run_fuzz_fields(delay=args.delay)
+            try:
+                input_fields = fuzzer.detect_inputs()
+                if not input_fields:
+                    logger.warning("\n!!! No input fields detected on the page.\n")
+                else:
+                    print("Detected input fields:")
+                    for idx, field in enumerate(input_fields):
+                        field_type = field.get_attribute("type") or "unknown"
+                        field_name = field.get_attribute("name") or "Unnamed"
+                        print(f"{idx}: {field_name} (type: {field_type})")
+
+                    selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+                    selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+                    payloads = generate_safe_payloads()
+                    for idx in selected_indices:
+                        if 0 <= idx < len(input_fields):
+                            fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
+
+            except (NoSuchElementException, TimeoutException) as e:
+                logger.error(f"\n!!! Error during input fuzzing: {e}\n")
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
 
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
-            fuzzer.detect_dropdowns(delay=args.delay)
+            try:
+                fuzzer.detect_dropdowns(delay=args.delay)
+            except (NoSuchElementException, TimeoutException) as e:
+                logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
 
     except (WebDriverException, TimeoutException) as e:
         logger.error(f"\n!!! Critical WebDriver Error: {e}\n")

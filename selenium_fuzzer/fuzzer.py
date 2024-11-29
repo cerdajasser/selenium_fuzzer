@@ -4,7 +4,7 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from urllib.parse import urlparse
 import difflib  # For comparing page sources
 from selenium.webdriver.remote.webelement import WebElement
@@ -31,9 +31,11 @@ class Fuzzer:
         logger = logging.getLogger(f"fuzzer_{domain}")
         logger.setLevel(logging.DEBUG)
 
+        # Create a file handler for the logger
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(logging.DEBUG)
 
+        # Set formatter for handlers
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
 
@@ -46,6 +48,7 @@ class Fuzzer:
         console_logger = logging.getLogger('console_logger')
         console_logger.setLevel(logging.INFO)
 
+        # Create a console handler for additional output
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
 
@@ -57,34 +60,94 @@ class Fuzzer:
 
         return console_logger
 
-    def detect_inputs(self):
-        """
-        Detect all suitable input fields on the page.
-        """
+    def take_snapshot(self, elements_to_track=None):
         try:
-            input_fields = self.driver.find_elements(By.TAG_NAME, "input")
+            page_source = self.driver.page_source if elements_to_track is None else None
+            current_url = self.driver.current_url
+            cookies = self.driver.get_cookies()
+            element_snapshots = {}
 
-            # Filter the fields to include only those suitable for text input
-            suitable_fields = []
-            for field in input_fields:
-                field_type = field.get_attribute("type").lower() if field.get_attribute("type") else "text"
-                if field_type in ["text", "email", "password", "search", "tel", "url"] and field.is_displayed() and field.is_enabled():
-                    suitable_fields.append(field)
+            if elements_to_track:
+                for element in elements_to_track:
+                    if isinstance(element, WebElement):
+                        try:
+                            element_id = element.get_attribute("id") or element.get_attribute("name")
+                            element_snapshots[element_id] = element.get_attribute("outerHTML")
+                        except Exception as e:
+                            self.logger.error(f"Error taking element snapshot: {e}")
 
-            self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
-            self.console_logger.info(f"Found {len(suitable_fields)} suitable input elements on the page.")
-            return suitable_fields
+            snapshot = {
+                'page_source': page_source,
+                'current_url': current_url,
+                'cookies': cookies,
+                'elements': element_snapshots
+            }
+
+            self.logger.debug(f"Snapshot taken for URL: {current_url}")
+            self.console_logger.info("Snapshot taken of the current page state.")
+            return snapshot
+        except Exception as e:
+            self.logger.error(f"Error taking snapshot of the page state: {e}")
+            return None
+
+    def compare_snapshots(self, before_snapshot, after_snapshot):
+        if not before_snapshot or not after_snapshot:
+            self.logger.warning("Cannot compare snapshots; one or both snapshots are None.")
+            return
+
+        if before_snapshot.get('page_source') and after_snapshot.get('page_source'):
+            before_source = before_snapshot['page_source']
+            after_source = after_snapshot['page_source']
+
+            if before_source != after_source:
+                self.logger.info("Detected changes in the full page source.")
+                self.console_logger.info("Detected changes in the full page source.")
+
+                diff = difflib.unified_diff(
+                    before_source.splitlines(),
+                    after_source.splitlines(),
+                    fromfile='Before Fuzzing',
+                    tofile='After Fuzzing',
+                    lineterm=''
+                )
+                diff_text = '\n'.join(diff)
+                self.logger.debug(f"Page source differences:\n{diff_text}")
+                self.console_logger.info("Changes detected in the page source:\n" + diff_text)
+            else:
+                self.logger.info("No changes detected in the full page source.")
+                self.console_logger.info("No changes detected in the full page source.")
+
+        for element_id in before_snapshot['elements']:
+            before_element = before_snapshot['elements'].get(element_id)
+            after_element = after_snapshot['elements'].get(element_id)
+            if before_element != after_element:
+                self.logger.info(f"Detected changes in element '{element_id}'.")
+                self.console_logger.info(f"⚠️ Detected changes in element '{element_id}'.")
+            else:
+                self.logger.info(f"No changes detected in element '{element_id}'.")
+                self.console_logger.info(f"No changes detected in element '{element_id}'.")
+
+        if before_snapshot['current_url'] != after_snapshot['current_url']:
+            self.logger.warning(f"URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
+            self.console_logger.warning(f"⚠️ URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
+
+        if before_snapshot['cookies'] != after_snapshot['cookies']:
+            self.logger.warning("Cookies have changed between snapshots.")
+            self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
+
+    def detect_inputs(self):
+        try:
+            input_fields = [field for field in self.driver.find_elements(By.TAG_NAME, "input") if field.is_displayed() and field.is_enabled() and field.get_attribute("type") not in ['hidden']]
+            self.logger.info(f"Found {len(input_fields)} suitable input elements on the page.")
+            self.console_logger.info(f"Found {len(input_fields)} suitable input elements on the page.")
+            return input_fields
         except Exception as e:
             self.logger.error(f"Error detecting input fields: {e}")
             self.console_logger.error(f"Error detecting input fields: {e}")
             return []
 
     def fuzz_field(self, input_element, payloads, delay=1):
-        """
-        Fuzz a given input field with a list of payloads.
-        """
         MAX_RETRIES = 3
-
         before_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
 
         for payload in payloads:
@@ -93,24 +156,14 @@ class Fuzzer:
                 success = False
 
                 while retry_count < MAX_RETRIES and not success:
-                    # Check if the element is interactable before fuzzing
-                    if not input_element.is_displayed() or not input_element.is_enabled():
-                        self.logger.warning(f"Field '{input_element.get_attribute('name') or 'Unnamed'}' is not interactable. Skipping.")
-                        self.console_logger.warning(f"⚠️ Field '{input_element.get_attribute('name') or 'Unnamed'}' is not interactable. Skipping.")
-                        return
-
-                    # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == "")
 
-                    # Set value using JavaScript to avoid front-end interference
                     self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
                     input_element.send_keys(Keys.TAB)
                     input_element.send_keys(Keys.ENTER)
 
-                    # Verify the value using JavaScript
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == payload)
-
                     entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
 
                     if entered_value == payload:
@@ -125,52 +178,68 @@ class Fuzzer:
                     self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
                     self.console_logger.warning(f"⚠️ Failed to verify payload '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
 
-                # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 
-            except (NoSuchElementException, TimeoutException, WebDriverException, ElementNotInteractableException) as e:
-                self.logger.error(f"Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
+                self.logger.error(f"Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
-                break  # Exit on critical error
+                continue
             except Exception as e:
-                self.logger.error(f"Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                self.logger.error(f"Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
-                break  # Exit on unexpected error
+                continue
 
         after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
-    def run_fuzz_fields(self, delay=1):
+    def detect_dropdowns(self, delay=1):
         try:
-            input_fields = self.detect_inputs()
-            if not input_fields:
-                self.logger.warning("No suitable input fields detected for fuzzing.")
-                self.console_logger.warning("⚠️ No suitable input fields detected for fuzzing.")
+            dropdown_elements = [el for el in self.driver.find_elements(By.TAG_NAME, "select") if el.is_displayed() and el.is_enabled()]
+            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+
+            if not dropdown_elements:
+                self.logger.warning(f"No dropdown elements found on the page.")
+                self.console_logger.warning(f"⚠️ No dropdown elements found on the page.")
                 return
 
-            print("Detected input fields:")
-            for idx, field in enumerate(input_fields):
-                field_type = field.get_attribute("type") or "unknown"
-                field_name = field.get_attribute("name") or "Unnamed"
-                print(f"{idx}: {field_name} (type: {field_type})")
+            for idx, dropdown_element in enumerate(dropdown_elements):
+                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
+                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
+                self.fuzz_dropdown(dropdown_element, delay)
 
-            selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
-            selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
-
-            payloads = ["test@example.com", "123456", "' OR 1=1 --"]
-
-            for idx in selected_indices:
-                if 0 <= idx < len(input_fields):
-                    self.fuzz_field(input_fields[idx], payloads, delay)
         except Exception as e:
-            self.logger.error(f"Unexpected error during input fuzzing: {e}")
-            self.console_logger.error(f"❌ Unexpected error during input fuzzing: {e}")
+            self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
+
+    def fuzz_dropdown(self, dropdown_element, delay=1):
+        before_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+        try:
+            select = Select(dropdown_element)
+            options = select.options
+            for index, option in enumerate(options):
+                select.select_by_index(index)
+                self.logger.info(f"Selected option '{option.text}' from dropdown.")
+                self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
+
+                WebDriverWait(self.driver, delay).until(lambda d: True)
+                self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()
+        except Exception as e:
+            self.logger.error(f"Error fuzzing dropdown: {e}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
+
+        after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+        if self.track_state:
+            self.compare_snapshots(before_snapshot, after_snapshot)
 
     def run_fuzz(self, delay=1):
         try:
+            self.previous_state = self.take_snapshot() if self.track_state else None
             self.run_fuzz_fields(delay)
             self.detect_dropdowns(delay=delay)
+            self.run_click_elements(delay)
         finally:
             self.driver.quit()

@@ -18,7 +18,8 @@ class JavaScriptChangeDetector:
         console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
         console_handler.setFormatter(console_formatter)
         self.console_logger = logging.getLogger('console_logger')
-        self.console_logger.addHandler(console_handler)
+        if not self.console_logger.hasHandlers():
+            self.console_logger.addHandler(console_handler)
         self.console_logger.setLevel(logging.INFO)
 
         if self.enable_devtools:
@@ -37,7 +38,7 @@ class JavaScriptChangeDetector:
             self.devtools('Log.enable', {})
             self.devtools('Runtime.enable', {})
             self.logger.info("DevTools successfully initialized.")
-            self.console_logger.info("DevTools successfully initialized for JavaScript and network monitoring.")
+            self.console_logger.info("🛠️ DevTools successfully initialized for JavaScript and network monitoring.")
         except Exception as e:
             self.logger.error(f"Error initializing DevTools: {e}")
             self.console_logger.error(f"Error initializing DevTools: {e}")
@@ -49,7 +50,7 @@ class JavaScriptChangeDetector:
 
         try:
             # Placeholder for capturing network activity
-            self.console_logger.info("Capturing network activity is enabled. Custom event handling not yet implemented.")
+            self.console_logger.info("🛠️ Capturing network activity is enabled. Custom event handling not yet implemented.")
         except Exception as e:
             self.logger.error(f"Error capturing network activity: {e}")
             self.console_logger.error(f"Error capturing network activity: {e}")
