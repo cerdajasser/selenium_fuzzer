@@ -1,4 +1,5 @@
 import os
+import time  # Added import statement for time
 
 class Config:
     """Configuration settings for the selenium fuzzer."""
