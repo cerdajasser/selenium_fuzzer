@@ -34,11 +34,16 @@ def main():
     logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
+    
+    # Set up console logging
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
     console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+    
+    # Avoid adding multiple handlers
+    if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+        logger.addHandler(console_handler)
 
     # Set up Chrome options
     chrome_options = webdriver.ChromeOptions()
