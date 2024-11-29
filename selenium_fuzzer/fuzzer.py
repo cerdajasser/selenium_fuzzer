@@ -144,6 +144,18 @@ class Fuzzer:
             self.logger.warning("Cookies have changed between snapshots.")
             self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
 
+    def detect_inputs(self):
+        """Detect all input fields on the page."""
+        try:
+            input_fields = self.driver.find_elements(By.TAG_NAME, "input")
+            self.logger.info(f"Found {len(input_fields)} input elements.")
+            self.console_logger.info(f"Found {len(input_fields)} input elements on the page.")
+            return input_fields
+        except Exception as e:
+            self.logger.error(f"Error detecting input fields: {e}")
+            self.console_logger.error(f"Error detecting input fields: {e}")
+            return []
+
     def fuzz_field(self, input_element, payloads, delay=1):
         """Fuzz a given input field with a list of payloads."""
         MAX_RETRIES = 3
