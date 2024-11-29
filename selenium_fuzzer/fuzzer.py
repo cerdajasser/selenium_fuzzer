@@ -204,7 +204,10 @@ class Fuzzer:
         Capture and log browser console logs.
         """
         try:
+            self.console_logger.info("ℹ️ [JavaScript Log]: Attempting to retrieve browser console logs.")
             console_logs = self.driver.get_log('browser')
+            if not console_logs:
+                self.console_logger.info("ℹ️ [JavaScript Log]: No console logs detected.")
             for log_entry in console_logs:
                 log_level = log_entry.get('level', '').upper()
                 log_message = log_entry.get('message', '')
@@ -215,6 +218,8 @@ class Fuzzer:
                 else:
                     self.logger.info(f"JavaScript Log: {log_message}")
                     self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
+
+            self.console_logger.info("ℹ️ [JavaScript Log]: Console log retrieval completed.")
 
         except WebDriverException as e:
             self.logger.error(f"Error capturing JavaScript console logs: {e}")

@@ -14,13 +14,14 @@ def create_driver(headless: bool = False):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    # Enable browser logging by modifying Chrome options directly
+    # Set logging preferences to capture JavaScript console logs
     caps = DesiredCapabilities.CHROME.copy()
     caps['goog:loggingPrefs'] = {'browser': 'ALL'}
 
-    # Integrate capabilities with options
+    # Merge capabilities into options
     options.set_capability('goog:loggingPrefs', caps['goog:loggingPrefs'])
 
+    # Use the ChromeDriver path from config.py
     service = Service(Config.CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
 
