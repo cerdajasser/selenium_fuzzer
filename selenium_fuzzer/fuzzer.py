@@ -22,6 +22,9 @@ class Fuzzer:
         self.console_logger = self.setup_console_logger()
         self.previous_state = None
 
+        # Inject JS for capturing console logs
+        self._initialize_js_logging()
+
     def setup_logger(self):
         """
         Set up a logger that creates a new log file for each website.
@@ -67,6 +70,59 @@ class Fuzzer:
             console_logger.addHandler(console_handler)
 
         return console_logger
+
+    def _initialize_js_logging(self):
+        """
+        Inject JavaScript code to capture all console log messages.
+        """
+        script = """
+            (function() {
+                var oldLog = console.log;
+                var oldError = console.error;
+                window.loggedMessages = [];
+                console.log = function(message) {
+                    window.loggedMessages.push({level: "INFO", message: message});
+                    oldLog.apply(console, arguments);
+                };
+                console.error = function(message) {
+                    window.loggedMessages.push({level: "ERROR", message: message});
+                    oldError.apply(console, arguments);
+                };
+            })();
+        """
+        self.driver.execute_script(script)
+
+    def _log_browser_console(self):
+        """
+        Capture and log browser console logs from the injected JavaScript.
+        """
+        try:
+            self.console_logger.info("ℹ️ [JavaScript Log]: Attempting to retrieve browser console logs.")
+            script = "return window.loggedMessages || [];"
+            console_logs = self.driver.execute_script(script)
+
+            if not console_logs:
+                self.console_logger.info("ℹ️ [JavaScript Log]: No console logs detected.")
+            else:
+                for log_entry in console_logs:
+                    log_level = log_entry.get('level', '').upper()
+                    log_message = log_entry.get('message', '')
+
+                    if log_level == "ERROR":
+                        self.logger.error(f"JavaScript Error: {log_message}")
+                        self.console_logger.error(f"🚨 [JavaScript Error]: {log_message}")
+                    else:
+                        self.logger.info(f"JavaScript Log: {log_message}")
+                        self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
+
+            # Clear the logged messages after retrieval
+            self.driver.execute_script("window.loggedMessages = [];")
+
+            self.console_logger.info("ℹ️ [JavaScript Log]: Console log retrieval completed.")
+
+        except WebDriverException as e:
+            self.logger.error(f"Error capturing JavaScript console logs: {e}")
+            self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
 
     def detect_inputs(self):
         """
@@ -199,30 +255,4 @@ class Fuzzer:
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
-    def _log_browser_console(self):
-        """
-        Capture and log browser console logs.
-        """
-        try:
-            self.console_logger.info("ℹ️ [JavaScript Log]: Attempting to retrieve browser console logs.")
-            console_logs = self.driver.get_log('browser')
-            if not console_logs:
-                self.console_logger.info("ℹ️ [JavaScript Log]: No console logs detected.")
-            for log_entry in console_logs:
-                log_level = log_entry.get('level', '').upper()
-                log_message = log_entry.get('message', '')
-
-                if log_level == "SEVERE":
-                    self.logger.error(f"JavaScript Error: {log_message}")
-                    self.console_logger.error(f"🚨 [JavaScript Error]: {log_message}")
-                else:
-                    self.logger.info(f"JavaScript Log: {log_message}")
-                    self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
-
-            self.console_logger.info("ℹ️ [JavaScript Log]: Console log retrieval completed.")
-
-        except WebDriverException as e:
-            self.logger.error(f"Error capturing JavaScript console logs: {e}")
-            self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
-
-    # Remaining methods: `take_snapshot` and `compare_snapshots` remain unchanged
+    # The methods `take_snapshot` and `compare_snapshots` remain unchanged

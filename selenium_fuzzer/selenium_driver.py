@@ -15,14 +15,11 @@ def create_driver(headless: bool = False):
     options.add_argument("--disable-dev-shm-usage")
 
     # Set logging preferences to capture JavaScript console logs
-    caps = DesiredCapabilities.CHROME.copy()
-    caps['goog:loggingPrefs'] = {'browser': 'ALL'}
-
-    # Merge capabilities into options
-    options.set_capability('goog:loggingPrefs', caps['goog:loggingPrefs'])
+    capabilities = DesiredCapabilities.CHROME.copy()
+    capabilities['goog:loggingPrefs'] = {'browser': 'ALL'}
 
     # Use the ChromeDriver path from config.py
     service = Service(Config.CHROMEDRIVER_PATH)
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
 
     return driver
