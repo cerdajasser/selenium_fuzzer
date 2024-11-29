@@ -58,7 +58,7 @@ def main():
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        # Instantiate the Fuzzer with the provided URL and state tracking option
+        # Instantiate the Fuzzer with the provided URL and state tracking
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
@@ -91,7 +91,8 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.fuzz_dropdowns(delay=args.delay)
+                # Corrected method call to detect and fuzz dropdowns
+                fuzzer.detect_dropdowns(delay=args.delay)
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:
