@@ -23,7 +23,7 @@ def main():
 
     # Set up logging with dynamic filename in the /log folder
     log_filename = Config.get_log_file_path()
-    logging.basicConfig(level=getattr(logging, Config.LOG_LEVEL), filename=log_filename,
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
@@ -40,17 +40,17 @@ def main():
     # Create the WebDriver using `create_driver` with logging enabled
     driver = None
     try:
-        driver = create_driver(headless=(args.headless or Config.SELENIUM_HEADLESS))
+        driver = create_driver(headless=args.headless)
 
         # Initialize JavaScriptChangeDetector with DevTools option
-        js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=(args.devtools or Config.ENABLE_DEVTOOLS))
+        js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools)
 
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
         # Instantiate the Fuzzer with the provided URL and state tracking option
-        fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=(args.track_state or Config.TRACK_STATE))
+        fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
             logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
