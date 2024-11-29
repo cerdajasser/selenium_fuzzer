@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
-    # Set up logging with dynamic filename in the /log folder
+    # Set up logging
     log_folder = "log"
     if not os.path.exists(log_folder):
         os.makedirs(log_folder)
@@ -48,55 +48,26 @@ def main():
 
     driver = None
     try:
-        # Initialize the WebDriver
+        # Initialize WebDriver
         driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
-        # Initialize JavaScriptChangeDetector with devtools option
+        # Initialize JavaScriptChangeDetector
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools)
 
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        # Instantiate the Fuzzer with the provided URL and state tracking
+        # Instantiate the Fuzzer
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
             logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
-            try:
-                input_fields = fuzzer.detect_inputs()
-                if not input_fields:
-                    logger.warning("\n!!! No input fields detected on the page.\n")
-                    return
-
-                print("Detected input fields:")
-                for idx, field in enumerate(input_fields):
-                    field_type = field.get_attribute("type") or "unknown"
-                    field_name = field.get_attribute("name") or "Unnamed"
-                    print(f"{idx}: {field_name} (type: {field_type})")
-
-                selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
-                selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
-
-                payloads = generate_safe_payloads()
-                for idx in selected_indices:
-                    if 0 <= idx < len(input_fields):
-                        fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
-
-            except (NoSuchElementException, TimeoutException) as e:
-                logger.error(f"\n!!! Error during input fuzzing: {e}\n")
-            except Exception as e:
-                logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
+            fuzzer.run_fuzz_fields(delay=args.delay)
 
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
-            try:
-                # Corrected method call to detect and fuzz dropdowns
-                fuzzer.detect_dropdowns(delay=args.delay)
-            except (NoSuchElementException, TimeoutException) as e:
-                logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
-            except Exception as e:
-                logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
+            fuzzer.detect_dropdowns(delay=args.delay)
 
     except (WebDriverException, TimeoutException) as e:
         logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
