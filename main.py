@@ -91,7 +91,7 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.detect_dropdowns(delay=args.delay)
+                fuzzer.fuzz_dropdowns(delay=args.delay)
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:

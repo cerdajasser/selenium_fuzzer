@@ -189,6 +189,32 @@ class Fuzzer:
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
+    def fuzz_dropdowns(self, delay=1):
+        """
+        Detect dropdown elements and interact with each of them.
+        
+        Args:
+            delay (int): Time in seconds to wait between dropdown interactions.
+        """
+        try:
+            dropdown_elements = self.driver.find_elements(By.TAG_NAME, "select")
+            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+
+            if not dropdown_elements:
+                self.logger.warning("No dropdown elements found on the page.")
+                self.console_logger.warning("⚠️ No dropdown elements found on the page.")
+                return
+
+            for idx, dropdown_element in enumerate(dropdown_elements):
+                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
+                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
+                self.fuzz_dropdown(dropdown_element, delay)
+
+        except Exception as e:
+            self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
+
     def run_fuzz(self, delay=1):
         """
         Main method to run the fuzzing operation with state tracking.
@@ -196,7 +222,7 @@ class Fuzzer:
         try:
             self.previous_state = self.take_snapshot() if self.track_state else None  # Initial snapshot
             self.run_fuzz_fields(delay)
-            self.detect_dropdowns(delay=delay)
+            self.fuzz_dropdowns(delay=delay)
             self.run_click_elements(delay)
         finally:
             self.driver.quit()
