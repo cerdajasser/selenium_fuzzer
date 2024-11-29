@@ -10,15 +10,16 @@ class JavaScriptChangeDetector:
         self.driver = driver
         self.enable_devtools = enable_devtools
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
         self.previous_page_source = ""
 
         # Set up console handler for logging important information
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
-        console_handler.setFormatter(console_formatter)
         self.console_logger = logging.getLogger('console_logger')
         if not self.console_logger.hasHandlers():
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
+            console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+            console_handler.setFormatter(console_formatter)
             self.console_logger.addHandler(console_handler)
         self.console_logger.setLevel(logging.INFO)
 
@@ -146,7 +147,7 @@ class JavaScriptChangeDetector:
                 break
             else:
                 self.logger.debug(f"Polling attempt {attempt + 1}: No changes detected.")
-                self.console_logger.debug(f"[Polling]: Attempt {attempt + 1}: No changes detected.")
+                self.console_logger.info(f"🔄 [Polling Attempt]: Attempt {attempt + 1}: No changes detected.")
 
     def compare_element_text(self, element_locator, previous_text=""):
         """Compare the text content of a specific element to detect changes.
