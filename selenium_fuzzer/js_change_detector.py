@@ -16,7 +16,7 @@ class JavaScriptChangeDetector:
         # Set up console handler for logging important information
         self.console_logger = logging.getLogger('console_logger')
         if not self.console_logger.hasHandlers():
-            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler = logging.StreamHandler(sys.stdout)  # Output to stdout explicitly
             console_handler.setLevel(logging.DEBUG)
             console_formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s: %(message)s')
             console_handler.setFormatter(console_formatter)
@@ -105,41 +105,3 @@ class JavaScriptChangeDetector:
         except WebDriverException as e:
             self.logger.error(f"Error capturing JavaScript console logs: {e}")
             self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
-
-    def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
-        """
-        Check for JavaScript changes or error messages on the page.
-
-        Args:
-            success_message (str): The expected success message after changes are applied.
-            error_keywords (list of str): List of keywords indicating errors.
-            delay (int): Time in seconds to wait for changes to appear.
-        """
-        if error_keywords is None:
-            error_keywords = ["error", "failed", "invalid"]
-
-        time.sleep(delay)
-        try:
-            page_source = self.driver.page_source.lower()
-
-            if hasattr(self, 'previous_page_source') and self.previous_page_source != page_source:
-                self.logger.info("Detected changes in the page source.")
-                self.console_logger.info("✅ [Detected Changes]: The page source has changed. Please review the latest content.")
-            else:
-                self.logger.info("No changes detected in the page source.")
-                self.console_logger.info("ℹ️ [No Changes]: The page content appears stable.")
-
-            self.previous_page_source = page_source
-
-            if success_message and success_message.lower() in page_source:
-                self.logger.info(f"Success message detected: '{success_message}'")
-                self.console_logger.info(f"✅ [Success]: Found success message: '{success_message}'.")
-
-            for keyword in error_keywords:
-                if keyword in page_source:
-                    self.logger.warning(f"Error detected: keyword '{keyword}' found.")
-                    self.console_logger.warning(f"🚨 [Error Detected]: Keyword '{keyword}' found. Investigate further.")
-
-        except WebDriverException as e:
-            self.logger.error(f"Error checking for JavaScript changes: {e}")
-            self.console_logger.error(f"Error checking for JavaScript changes: {e}")
