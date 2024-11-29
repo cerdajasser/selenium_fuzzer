@@ -158,10 +158,3 @@ class Fuzzer:
         ...
 
     def run_fuzz(self, delay=1):
-        """Main method to run the fuzzing operation with state tracking."""
-        # Updated logic to handle fuzzing input fields, dropdowns, etc.
-        ...
-
----
-
-With `Fuzzer.py`, the main focus was improving state tracking and ensuring console output is consistently flushed to stdout. Now, I'll provide the fully updated `main.py`.
