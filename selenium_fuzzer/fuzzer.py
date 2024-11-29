@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import difflib  # For comparing page sources
 from selenium.webdriver.remote.webelement import WebElement
 
+
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url, track_state=True):
         """

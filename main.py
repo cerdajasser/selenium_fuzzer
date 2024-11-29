@@ -2,12 +2,6 @@ import logging
 import argparse
 import os
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
@@ -25,7 +19,7 @@ def main():
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
-    # Set up logging
+    # Set up logging with dynamic filename in the /log folder
     log_folder = "log"
     if not os.path.exists(log_folder):
         os.makedirs(log_folder)
@@ -48,17 +42,17 @@ def main():
 
     driver = None
     try:
-        # Initialize WebDriver
+        # Initialize the WebDriver
         driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
-        # Initialize JavaScriptChangeDetector
+        # Initialize JavaScriptChangeDetector with devtools option
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools)
 
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        # Instantiate the Fuzzer
+        # Instantiate the Fuzzer with the provided URL
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
