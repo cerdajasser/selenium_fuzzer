@@ -83,7 +83,16 @@ Selenium Fuzzer logs its activities to both a log file (located in the `/log` di
 - **Graceful Exit**: Improved handling of exceptions to ensure the script quits gracefully and provides helpful debug information.
 - **Detailed Logging**: Added more detailed logging, including logging JavaScript changes and the status of dropdown interactions, making debugging easier.
 - **Consistent Console Output**: Both dropdown and input field interactions now provide consistent and human-readable console output to match logging standards.
+### JavaScript Event Analysis and Network Monitoring
+Selenium Fuzzer now has the ability to capture JavaScript errors and monitor network activity using Chrome DevTools Protocol. To enable this feature, ensure `ENABLE_DEVTOOLS` is set to `True` in the `config.py` file.
 
+This feature provides the following capabilities:
+- **JavaScript Console Log Analysis**: Capture JavaScript console logs, including errors and warnings.
+- **Network Request Monitoring**: Log all network requests made by the page to identify abnormal or anomalous behavior.
+
+These features are configurable via `config.py`:
+- **ENABLE_DEVTOOLS**: Set to `True` or `False` to enable or disable DevTools integration.
+- **DEVTOOLS_LOG_LEVEL**: Define the verbosity of logs for DevTools (e.g., `DEBUG`, `INFO`).
 ## Troubleshooting
 - **ChromeDriver Path**: Ensure `CHROMEDRIVER_PATH` in `config.py` points to the correct path of ChromeDriver on your system.
 - **Permissions**: If you encounter permission errors, try running the script with elevated privileges or update the permissions on `chromedriver`.

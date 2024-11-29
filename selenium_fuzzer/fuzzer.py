@@ -108,6 +108,7 @@ class Fuzzer:
 
                 # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()  # Capture JS logs after fuzzing
 
             except (NoSuchElementException, TimeoutException, WebDriverException) as e:
                 self.logger.error(f"\n!!! Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
@@ -155,6 +156,7 @@ class Fuzzer:
                 self.logger.info(f"\n>>> Selected option '{option.text}' from dropdown.")
                 time.sleep(delay)  # Add a delay for each selection to observe any changes
                 self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()  # Capture JS logs after each option is selected
         except Exception as e:
             self.logger.error(f"Error fuzzing dropdown: {e}")
 
@@ -179,11 +181,12 @@ class Fuzzer:
 # Example usage
 if __name__ == "__main__":
     from selenium import webdriver
-    from selenium_fuzzer.js_change_detector import JSChangeDetector
+    from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 
     # Create a driver instance and JS change detector
-    driver = webdriver.Chrome()
-    js_change_detector = JSChangeDetector(driver)
+    chrome_options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(options=chrome_options)
+    js_change_detector = JavaScriptChangeDetector(driver)
 
     # Instantiate and run the fuzzer
     fuzzer = Fuzzer(driver, js_change_detector, "https://example.com")
