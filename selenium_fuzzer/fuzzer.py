@@ -59,13 +59,22 @@ class Fuzzer:
 
     def detect_inputs(self):
         """
-        Detect all input fields on the page.
+        Detect all suitable input fields on the page.
         """
         try:
+            # Detect all input fields
             input_fields = self.driver.find_elements(By.TAG_NAME, "input")
-            self.logger.info(f"Found {len(input_fields)} input elements.")
-            self.console_logger.info(f"Found {len(input_fields)} input elements on the page.")
-            return input_fields
+
+            # Filter the fields to include only those suitable for text input
+            suitable_fields = []
+            for field in input_fields:
+                field_type = field.get_attribute("type").lower() if field.get_attribute("type") else "text"
+                if field_type in ["text", "email", "password", "search", "tel", "url"]:
+                    suitable_fields.append(field)
+
+            self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
+            self.console_logger.info(f"Found {len(suitable_fields)} suitable input elements on the page.")
+            return suitable_fields
         except Exception as e:
             self.logger.error(f"Error detecting input fields: {e}")
             self.console_logger.error(f"Error detecting input fields: {e}")
@@ -85,13 +94,16 @@ class Fuzzer:
                 success = False
 
                 while retry_count < MAX_RETRIES and not success:
+                    # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == "")
 
+                    # Set value using JavaScript to avoid front-end interference
                     self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
                     input_element.send_keys(Keys.TAB)
                     input_element.send_keys(Keys.ENTER)
 
+                    # Verify the value using JavaScript
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == payload)
 
                     entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
@@ -108,6 +120,7 @@ class Fuzzer:
                     self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
                     self.console_logger.warning(f"⚠️ Failed to verify payload '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
 
+                # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 
@@ -158,14 +171,6 @@ class Fuzzer:
             self.logger.error(f"Error fuzzing dropdown: {e}")
             self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
 
-    def take_snapshot(self, elements_to_track=None):
-        # Existing snapshot code
-        pass
-
-    def compare_snapshots(self, before_snapshot, after_snapshot):
-        # Existing comparison code
-        pass
-
     def run_fuzz_fields(self, delay=1):
         try:
             input_fields = self.detect_inputs()
@@ -183,4 +188,3 @@ class Fuzzer:
             self.run_click_elements(delay)
         finally:
             self.driver.quit()
-
