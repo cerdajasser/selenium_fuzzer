@@ -38,7 +38,7 @@ class Fuzzer:
         file_handler.setLevel(logging.DEBUG)
 
         # Set formatter for handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
 
         # Add handlers to the logger
