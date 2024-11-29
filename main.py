@@ -1,13 +1,14 @@
 import logging
 import argparse
 import os
+import time
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
-import time
+from selenium_fuzzer.selenium_driver import create_driver
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -26,34 +27,26 @@ def main():
         os.makedirs(log_folder)
 
     log_filename = os.path.join(log_folder, f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
-    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    
+
     # Set up console logging
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
     console_handler.setFormatter(console_formatter)
-    
+
     # Avoid adding multiple handlers
     if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
         logger.addHandler(console_handler)
 
-    # Set up Chrome options
-    chrome_options = webdriver.ChromeOptions()
-    if args.headless:
-        chrome_options.add_argument("--headless")
-
-    if args.devtools:
-        chrome_options.add_argument("--auto-open-devtools-for-tabs")
-
+    # Create the WebDriver using `create_driver` with logging enabled
     driver = None
     try:
-        # Initialize the WebDriver
-        driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
+        driver = create_driver(headless=args.headless)
 
-        # Initialize JavaScriptChangeDetector with devtools option
+        # Initialize JavaScriptChangeDetector with DevTools option
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools)
 
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")

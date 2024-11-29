@@ -6,7 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from urllib.parse import urlparse
-import difflib  # For comparing page sources
+import difflib
 from selenium.webdriver.remote.webelement import WebElement
 
 class Fuzzer:
@@ -140,7 +140,7 @@ class Fuzzer:
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
-    def fuzz_dropdowns(self, selector="select", delay=10):
+    def fuzz_dropdowns(self, selector="select", delay=1):
         """
         Detect dropdown elements using the provided selector and interact with them.
 
@@ -152,11 +152,6 @@ class Fuzzer:
             dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
             self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
             self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
-
-            if not dropdown_elements:
-                self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
-                self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
-                return
 
             for idx, dropdown_element in enumerate(dropdown_elements):
                 self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
@@ -185,6 +180,8 @@ class Fuzzer:
                 self.logger.info(f"Selected option '{option.text}' from dropdown.")
                 self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
                 WebDriverWait(self.driver, delay).until(lambda d: True)
+
+                # Check for JavaScript changes after interacting with dropdown
                 self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 

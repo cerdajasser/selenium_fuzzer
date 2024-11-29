@@ -12,17 +12,16 @@ class JavaScriptChangeDetector:
         self.enable_devtools = enable_devtools
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
-        self.previous_page_source = ""
 
         # Set up console handler for logging important information
         self.console_logger = logging.getLogger('console_logger')
         if not self.console_logger.hasHandlers():
             console_handler = logging.StreamHandler(sys.stdout)  # Output to stdout explicitly
-            console_handler.setLevel(logging.INFO)
-            console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+            console_handler.setLevel(logging.DEBUG)
+            console_formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s: %(message)s')
             console_handler.setFormatter(console_formatter)
             self.console_logger.addHandler(console_handler)
-        self.console_logger.setLevel(logging.INFO)
+        self.console_logger.setLevel(logging.DEBUG)
 
         # Initialize Chrome DevTools Protocol (CDP) session if devtools are enabled
         if self.enable_devtools:
@@ -45,6 +44,8 @@ class JavaScriptChangeDetector:
         """Capture and analyze JavaScript console logs for errors or anomalies"""
         try:
             console_logs = self.driver.get_log("browser")
+            if not console_logs:
+                self.console_logger.info("ℹ️ [JavaScript Log]: No console logs detected.")
             for log_entry in console_logs:
                 log_level = log_entry.get('level', '').upper()
                 log_message = log_entry.get('message', '')
@@ -74,10 +75,9 @@ class JavaScriptChangeDetector:
         time.sleep(delay)
         page_source = self.driver.page_source.lower()
 
-        if self.previous_page_source and self.previous_page_source != page_source:
+        if hasattr(self, 'previous_page_source') and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
             self.console_logger.info("✅ [Detected Changes]: The page source has changed. Please review the latest content.")
-            self._log_updated_text()
         else:
             self.logger.info("No changes detected in the page source.")
             self.console_logger.info("ℹ️ [No Changes]: The page content appears stable.")
@@ -93,30 +93,3 @@ class JavaScriptChangeDetector:
                 self.logger.warning(f"Error detected: keyword '{keyword}' found.")
                 self.console_logger.warning(f"🚨 [Error Detected]: Keyword '{keyword}' found. Investigate further.")
 
-    def _log_updated_text(self):
-        """Retrieve updated text logged by JavaScript and log it to the console."""
-        try:
-            script = "return window.updatedTextLogs || [];"
-            updated_text_logs = self.driver.execute_script(script)
-            if updated_text_logs:
-                self.console_logger.info("📝 [Detected Changes]: JavaScript updates detected:")
-                for log in updated_text_logs:
-                    if log:
-                        self.console_logger.info(f"➡️ [JavaScript Change]: {log}")
-
-            # Clear logs after retrieval
-            self.driver.execute_script("window.updatedTextLogs = [];")
-        except WebDriverException as e:
-            self.logger.error(f"Error retrieving JavaScript logs: {e}")
-            self.console_logger.error(f"Error retrieving JavaScript logs: {e}")
-
-    def capture_network_activity(self):
-        """Capture and analyze network activity for anomalies (optional placeholder)"""
-        if not self.enable_devtools:
-            return
-
-        try:
-            self.console_logger.info("🛠️ Capturing network activity is enabled. Custom event handling not yet implemented.")
-        except WebDriverException as e:
-            self.logger.error(f"Error capturing network activity: {e}")
-            self.console_logger.error(f"Error capturing network activity: {e}")
