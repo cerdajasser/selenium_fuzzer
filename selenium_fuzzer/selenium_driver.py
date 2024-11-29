@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium_fuzzer.config import Config
 
 def create_driver(headless: bool = False):
@@ -13,9 +14,13 @@ def create_driver(headless: bool = False):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
+    # Enable browser logging
+    caps = DesiredCapabilities.CHROME
+    caps['goog:loggingPrefs'] = {'browser': 'ALL'}
+
     # Use the ChromeDriver path from config.py
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=caps)
     return driver
