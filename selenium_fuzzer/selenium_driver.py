@@ -19,14 +19,13 @@ def create_driver(headless: bool = False):
     if Config.ENABLE_DEVTOOLS:
         options.add_argument("--auto-open-devtools-for-tabs")
 
-    # Enable browser logging
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
+    # Enable browser logging within options (Selenium 4+ approach)
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
     # Use the ChromeDriver path from config.py
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create the WebDriver instance
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    # Create the WebDriver instance without deprecated desired_capabilities
+    driver = webdriver.Chrome(service=service, options=options)
     return driver
