@@ -21,7 +21,6 @@ class Fuzzer:
         self.logger = self.setup_logger()
         self.console_logger = self.setup_console_logger()
         self.previous_state = None
-        self._initialize_js_logging()
 
     def setup_logger(self):
         """
@@ -69,42 +68,6 @@ class Fuzzer:
 
         return console_logger
 
-    def _initialize_js_logging(self):
-        """
-        Inject JavaScript code to capture all console log messages.
-        """
-        try:
-            script = """
-                (function() {
-                    var oldLog = console.log;
-                    var oldError = console.error;
-                    window.loggedMessages = [];
-                    console.log = function(message) {
-                        window.loggedMessages.push({level: "INFO", message: message});
-                        oldLog.apply(console, arguments);
-                    };
-                    console.error = function(message) {
-                        window.loggedMessages.push({level: "ERROR", message: message});
-                        oldError.apply(console, arguments);
-                    };
-                })();
-            """
-            self.driver.execute_script(script)
-            self.console_logger.info("ℹ️ JavaScript for logging successfully injected.")
-        except WebDriverException as e:
-            self.logger.error(f"Error injecting JavaScript for logging: {e}")
-            self.console_logger.error(f"Error injecting JavaScript for logging: {e}")
-
-    def is_window_open(self):
-        """
-        Check if the current window is still open.
-        """
-        try:
-            self.driver.current_window_handle
-            return True
-        except WebDriverException:
-            return False
-
     def detect_inputs(self):
         """
         Detect all input fields on the page.
@@ -134,7 +97,6 @@ class Fuzzer:
 
         for payload in payloads:
             try:
-                self.console_logger.debug("Starting to fuzz input field with payload.")
                 retry_count = 0
                 success = False
 
@@ -181,39 +143,91 @@ class Fuzzer:
         if self.track_state:
             self.compare_snapshots(before_snapshot, after_snapshot)
 
+    def fuzz_dropdowns(self, selector="select", delay=1):
+        """
+        Detect dropdown elements using the provided selector and interact with them.
+
+        Args:
+            selector (str): CSS selector to locate dropdowns.
+            delay (int): Time in seconds to wait between dropdown interactions.
+        """
+        try:
+            dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
+            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+
+            if not dropdown_elements:
+                self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
+                self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
+                return
+
+            for idx, dropdown_element in enumerate(dropdown_elements):
+                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
+                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
+                self.fuzz_dropdown(dropdown_element, delay)
+
+        except Exception as e:
+            self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
+
+    def fuzz_dropdown(self, dropdown_element, delay=1):
+        """
+        Interact with a dropdown element by selecting each option.
+
+        Args:
+            dropdown_element (WebElement): The dropdown element to fuzz.
+            delay (int): Time in seconds to wait between selections.
+        """
+        before_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+
+        try:
+            select = Select(dropdown_element)
+            options = select.options
+            for index, option in enumerate(options):
+                select.select_by_index(index)
+                self.logger.info(f"Selected option '{option.text}' from dropdown.")
+                self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
+                WebDriverWait(self.driver, delay).until(lambda d: True)
+
+                # Check for JavaScript changes after interacting with dropdown
+                self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()
+
+                # Retrieve and log browser console logs
+                self._log_browser_console()
+
+        except Exception as e:
+            self.logger.error(f"Error fuzzing dropdown: {e}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
+
+        after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+        if self.track_state:
+            self.compare_snapshots(before_snapshot, after_snapshot)
+
     def _log_browser_console(self):
         """
         Capture and log browser console logs.
         """
         try:
-            if not self.is_window_open():
-                self.console_logger.warning("⚠️ Browser window is closed. Skipping log retrieval.")
-                return
-
             self.console_logger.info("ℹ️ [JavaScript Log]: Attempting to retrieve browser console logs.")
-            script = "return window.loggedMessages || [];"
-            console_logs = self.driver.execute_script(script)
-
+            console_logs = self.driver.get_log('browser')
             if not console_logs:
                 self.console_logger.info("ℹ️ [JavaScript Log]: No console logs detected.")
-            else:
-                for log_entry in console_logs:
-                    log_level = log_entry.get('level', '').upper()
-                    log_message = log_entry.get('message', '')
+            for log_entry in console_logs:
+                log_level = log_entry.get('level', '').upper()
+                log_message = log_entry.get('message', '')
 
-                    if log_level == "ERROR":
-                        self.logger.error(f"JavaScript Error: {log_message}")
-                        self.console_logger.error(f"🚨 [JavaScript Error]: {log_message}")
-                    else:
-                        self.logger.info(f"JavaScript Log: {log_message}")
-                        self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
+                if log_level == "SEVERE":
+                    self.logger.error(f"JavaScript Error: {log_message}")
+                    self.console_logger.error(f"🚨 [JavaScript Error]: {log_message}")
+                else:
+                    self.logger.info(f"JavaScript Log: {log_message}")
+                    self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
 
-            # Clear the logged messages after retrieval
-            self.driver.execute_script("window.loggedMessages = [];")
             self.console_logger.info("ℹ️ [JavaScript Log]: Console log retrieval completed.")
 
         except WebDriverException as e:
             self.logger.error(f"Error capturing JavaScript console logs: {e}")
             self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
 
-    # The rest of the methods like `fuzz_dropdowns`, `take_snapshot`, and `compare_snapshots` remain unchanged
+    # Remaining methods: `take_snapshot` and `compare_snapshots` remain unchanged
