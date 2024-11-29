@@ -2,7 +2,7 @@ import logging
 import argparse
 import os
 from selenium import webdriver
-from selenium.webdriver.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
@@ -16,15 +16,17 @@ def main():
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
-    parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol for monitoring.")
+    parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
     # Set up logging with dynamic filename in the /log folder
     log_folder = "log"
-    os.makedirs(log_folder, exist_ok=True)
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
     log_filename = os.path.join(log_folder, f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
-    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename,
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     
