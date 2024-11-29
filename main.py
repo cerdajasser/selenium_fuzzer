@@ -3,6 +3,10 @@ import argparse
 import os
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -17,7 +21,7 @@ def main():
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
-    parser.add_argument("--dropdown-selector", type=str, default="select", help="CSS selector for dropdown menus.")
+    parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     args = parser.parse_args()
 
     # Set up logging with dynamic filename in the /log folder
@@ -26,7 +30,7 @@ def main():
         os.makedirs(log_folder)
 
     log_filename = os.path.join(log_folder, f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
-    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename,
+    logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     console_handler = logging.StreamHandler()
@@ -43,8 +47,8 @@ def main():
         # Initialize the WebDriver
         driver = webdriver.Chrome(service=webdriver.chrome.service.Service(Config.CHROMEDRIVER_PATH), options=chrome_options)
 
-        js_change_detector = JavaScriptChangeDetector(driver)
-        js_change_detector.capture_network_activity()  # Capture network activity for analysis
+        # Initialize JavaScriptChangeDetector with devtools option
+        js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools)
 
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
@@ -83,14 +87,11 @@ def main():
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.detect_dropdowns(args.dropdown_selector)
+                fuzzer.detect_dropdowns()
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
             except Exception as e:
                 logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
-
-        # Capture JavaScript console logs at the end
-        js_change_detector.capture_js_console_logs()
 
     except (WebDriverException, TimeoutException) as e:
         logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
