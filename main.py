@@ -1,7 +1,6 @@
 import logging
 import argparse
 import os
-import sys
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -35,12 +34,11 @@ def main():
     logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
     console_handler.setFormatter(console_formatter)
-    if not logger.hasHandlers():
-        logger.addHandler(console_handler)
+    logger.addHandler(console_handler)
 
     # Set up Chrome options
     chrome_options = webdriver.ChromeOptions()
@@ -61,9 +59,8 @@ def main():
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
-        sys.stdout.flush()  # Ensure immediate log output
 
-        # Instantiate the Fuzzer with the provided URL
+        # Instantiate the Fuzzer with the provided URL and state tracking option
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
@@ -72,7 +69,6 @@ def main():
                 input_fields = fuzzer.detect_inputs()
                 if not input_fields:
                     logger.warning("\n!!! No input fields detected on the page.\n")
-                    sys.stdout.flush()  # Ensure immediate log output
                     return
 
                 print("Detected input fields:")
@@ -91,33 +87,26 @@ def main():
 
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during input fuzzing: {e}\n")
-                sys.stdout.flush()  # Ensure immediate log output
             except Exception as e:
                 logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
-                sys.stdout.flush()  # Ensure immediate log output
 
         if args.check_dropdowns:
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
-                fuzzer.detect_dropdowns(delay=args.delay)
+                fuzzer.fuzz_dropdowns(delay=args.delay)
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
-                sys.stdout.flush()  # Ensure immediate log output
             except Exception as e:
                 logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
-                sys.stdout.flush()  # Ensure immediate log output
 
     except (WebDriverException, TimeoutException) as e:
         logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
-        sys.stdout.flush()  # Ensure immediate log output
     except Exception as e:
         logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
-        sys.stdout.flush()  # Ensure immediate log output
     finally:
         if driver:
             driver.quit()
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
-            sys.stdout.flush()  # Ensure immediate log output
 
 if __name__ == "__main__":
     main()
