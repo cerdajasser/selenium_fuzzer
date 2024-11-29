@@ -66,15 +66,7 @@ class Fuzzer:
         return console_logger
 
     def take_snapshot(self, elements_to_track=None):
-        """
-        Take a snapshot of the page state.
-
-        Args:
-            elements_to_track (list): List of WebElement to track.
-
-        Returns:
-            dict: A dictionary containing page state information.
-        """
+        # Existing snapshot taking logic
         try:
             page_source = self.driver.page_source if elements_to_track is None else None
             current_url = self.driver.current_url
@@ -105,13 +97,7 @@ class Fuzzer:
             return None
 
     def compare_snapshots(self, before_snapshot, after_snapshot):
-        """
-        Compare two snapshots to detect any changes.
-
-        Args:
-            before_snapshot (dict): The initial state of the page.
-            after_snapshot (dict): The state after performing some action.
-        """
+        # Existing snapshot comparison logic
         if not before_snapshot or not after_snapshot:
             self.logger.warning("Cannot compare snapshots; one or both snapshots are None.")
             return
@@ -160,39 +146,10 @@ class Fuzzer:
             self.logger.warning("Cookies have changed between snapshots.")
             self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
 
-    def fuzz_field(self, input_element, payloads, delay=1):
+    def detect_dropdowns(self, delay=1):
         """
-        Fuzz a given input field with a list of payloads.
-        """
-        MAX_RETRIES = 3
+        Detect dropdown elements on the page and interact with them.
 
-        before_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
-
-        # Existing fuzzing logic
-        for payload in payloads:
-            ...
-
-        after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
-        if self.track_state:
-            self.compare_snapshots(before_snapshot, after_snapshot)
-
-    def fuzz_dropdown(self, dropdown_element, delay=1):
-        """
-        Interact with a dropdown element by selecting each option.
-        """
-        before_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
-
-        # Existing dropdown fuzzing logic
-        ...
-
-        after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
-        if self.track_state:
-            self.compare_snapshots(before_snapshot, after_snapshot)
-
-    def fuzz_dropdowns(self, delay=1):
-        """
-        Detect dropdown elements and interact with each of them.
-        
         Args:
             delay (int): Time in seconds to wait between dropdown interactions.
         """
@@ -215,6 +172,40 @@ class Fuzzer:
             self.logger.error(f"Error detecting dropdowns: {e}")
             self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
 
+    def fuzz_dropdown(self, dropdown_element, delay=1):
+        """
+        Interact with a dropdown element by selecting each option.
+
+        Args:
+            dropdown_element (WebElement): The dropdown element to fuzz.
+            delay (int): Time in seconds to wait between selections.
+        """
+        before_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+
+        try:
+            select = Select(dropdown_element)
+            options = select.options
+            for index, option in enumerate(options):
+                # Select each option by index
+                select.select_by_index(index)
+                self.logger.info(f"Selected option '{option.text}' from dropdown.")
+                self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
+
+                # Use explicit wait to ensure JavaScript changes are applied
+                WebDriverWait(self.driver, delay).until(lambda d: True)  # Placeholder for an appropriate condition
+
+                # Capture JavaScript changes and console logs after each option is selected
+                self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()
+
+        except Exception as e:
+            self.logger.error(f"Error fuzzing dropdown: {e}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
+
+        after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
+        if self.track_state:
+            self.compare_snapshots(before_snapshot, after_snapshot)
+
     def run_fuzz(self, delay=1):
         """
         Main method to run the fuzzing operation with state tracking.
@@ -222,7 +213,7 @@ class Fuzzer:
         try:
             self.previous_state = self.take_snapshot() if self.track_state else None  # Initial snapshot
             self.run_fuzz_fields(delay)
-            self.fuzz_dropdowns(delay=delay)
+            self.detect_dropdowns(delay=delay)
             self.run_click_elements(delay)
         finally:
             self.driver.quit()
