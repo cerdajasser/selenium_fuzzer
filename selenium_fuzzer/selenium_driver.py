@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 from selenium_fuzzer.config import Config  # Import Config class
 
@@ -8,7 +7,6 @@ def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
     
-    # Disable headless if instructed to show the browser
     if headless or Config.SELENIUM_HEADLESS:
         options.add_argument("--headless")
     
@@ -25,6 +23,6 @@ def create_driver(headless: bool = False):
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Initialize the WebDriver with options and service, without using desired_capabilities
+    # Initialize the WebDriver with options and service
     driver = webdriver.Chrome(service=service, options=options)
     return driver

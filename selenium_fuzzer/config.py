@@ -6,12 +6,12 @@ class Config:
     # Path to ChromeDriver
     CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
 
-    # Headless mode for Selenium - default is set to False to show the browser
+    # Headless mode for Selenium
     SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'False') == 'True'
 
     # Logging configuration
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
-    LOG_FILE = os.getenv('LOG_FILE', 'selenium_fuzzer.log')
+    LOG_FILE = os.getenv('LOG_FILE', f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
 
     # DevTools Configuration (can be overridden by the command-line argument --devtools)
     ENABLE_DEVTOOLS = os.getenv('ENABLE_DEVTOOLS', 'False') == 'True'
