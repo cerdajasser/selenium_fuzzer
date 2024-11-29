@@ -7,8 +7,12 @@ from selenium_fuzzer.config import Config  # Import Config class
 def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
-    if headless:
+    
+    # Disable headless if instructed to show the browser
+    if headless or Config.SELENIUM_HEADLESS:
         options.add_argument("--headless")
+    
+    # Common settings for ChromeDriver
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
