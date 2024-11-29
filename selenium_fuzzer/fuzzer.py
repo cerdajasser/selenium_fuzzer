@@ -68,7 +68,7 @@ class Fuzzer:
             suitable_fields = []
             for field in input_fields:
                 field_type = field.get_attribute("type").lower() if field.get_attribute("type") else "text"
-                if field_type in ["text", "email", "password", "search", "tel", "url"]:
+                if field_type in ["text", "email", "password", "search", "tel", "url"] and field.is_displayed() and field.is_enabled():
                     suitable_fields.append(field)
 
             self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
@@ -132,9 +132,11 @@ class Fuzzer:
             except (NoSuchElementException, TimeoutException, WebDriverException, ElementNotInteractableException) as e:
                 self.logger.error(f"Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                break  # Exit on critical error
             except Exception as e:
                 self.logger.error(f"Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                break  # Exit on unexpected error
 
         after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
         if self.track_state:
