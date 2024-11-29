@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
+    parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
     # Set up logging with dynamic filename in the /log folder
@@ -57,8 +58,8 @@ def main():
         driver.get(args.url)
         logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        # Instantiate the Fuzzer with the provided URL
-        fuzzer = Fuzzer(driver, js_change_detector, args.url)
+        # Instantiate the Fuzzer with the provided URL and state tracking option
+        fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state)
 
         if args.fuzz_fields:
             logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
