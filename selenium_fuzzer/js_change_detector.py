@@ -61,9 +61,9 @@ class JavaScriptChangeDetector:
             for log_entry in console_logs:
                 log_message = log_entry['message']
                 if "error" in log_message.lower():
-                    self.console_logger.warning(f"[JavaScript Error]: {log_message}")
+                    self.console_logger.warning(f"🚨 [JavaScript Error]: Something went wrong! The message received: '{log_message}'. Please check for potential issues on the page.")
                 else:
-                    self.console_logger.info(f"[JavaScript Log]: {log_message}")
+                    self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
         except Exception as e:
             self.logger.error(f"Error capturing JavaScript console logs: {e}")
             self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
@@ -88,38 +88,23 @@ class JavaScriptChangeDetector:
         # Compare the current page source with the previous one to detect any changes
         if self.previous_page_source and self.previous_page_source != page_source:
             self.logger.info("Detected changes in the page source.")
-            self.console_logger.info("[Detected Changes]: Detected changes in the page source.")
+            self.console_logger.info("✅ [Detected Changes]: The page source has changed. Please review the latest content.")
             self._log_updated_text()  # Log the updated text from JavaScript changes
         else:
             self.logger.info("No changes detected in the page source.")
-            self.console_logger.info("[No Changes]: No changes detected in the page source.")
+            self.console_logger.info("ℹ️ [No Changes]: The page content appears to be stable, with no detected changes.")
         self.previous_page_source = page_source
 
         # Check for success messages
         if success_message and success_message.lower() in page_source:
             self.logger.info(f"Success message detected: '{success_message}'")
-            self.console_logger.info(f"[Success]: Success message detected: '{success_message}'")
+            self.console_logger.info(f"✅ [Success]: The expected success message was found: '{success_message}'.")
 
         # Check for error keywords in the page source
         for keyword in error_keywords:
             if keyword in page_source:
                 self.logger.warning(f"Error detected: keyword '{keyword}' found on the page.")
-                self.console_logger.warning(f"[Error Detected]: Keyword '{keyword}' found on the page.")
-
-    def observe_element_changes(self, element_locator, timeout=10):
-        """Observe specific elements for changes using Selenium's explicit waits.
-
-        Args:
-            element_locator (tuple): Locator tuple to find the element (e.g., (By.ID, 'element_id')).
-            timeout (int): Time in seconds to wait for the element to change.
-        """
-        try:
-            WebDriverWait(self.driver, timeout).until(EC.staleness_of(self.driver.find_element(*element_locator)))
-            self.logger.info("Detected a change in the targeted element.")
-            self.console_logger.info("[Element Change]: Detected a change in the targeted element.")
-        except TimeoutException:
-            self.logger.info("No change detected in the targeted element within the timeout period.")
-            self.console_logger.info("[Element Stable]: No change detected in the targeted element within the timeout period.")
+                self.console_logger.warning(f"🚨 [Error Detected]: The keyword '{keyword}' was found on the page, which may indicate an issue. Please investigate further.")
 
     def _initialize_js_logging(self):
         """Initialize JavaScript logging to store updates in a global variable."""
@@ -131,10 +116,10 @@ class JavaScriptChangeDetector:
         script = "return window.updatedTextLogs || [];"
         updated_text_logs = self.driver.execute_script(script)
         if updated_text_logs:
-            self.console_logger.info("[Detected Changes]: Logging detected changes from JavaScript:")
+            self.console_logger.info("📝 [Detected Changes]: Logging changes detected from JavaScript:")
             for log in updated_text_logs:
                 if log:  # Only log non-empty changes
-                    self.console_logger.info(f"[JavaScript Change]: {log}")
+                    self.console_logger.info(f"➡️ [JavaScript Change]: {log}")
 
         # Clear the logs after retrieval
         self.driver.execute_script("window.updatedTextLogs = [];")
@@ -151,7 +136,7 @@ class JavaScriptChangeDetector:
             current_page_source = self.driver.page_source.lower()
             if self.previous_page_source and self.previous_page_source != current_page_source:
                 self.logger.info("Detected changes during polling.")
-                self.console_logger.info("[Polling]: Detected changes during polling.")
+                self.console_logger.info("🔍 [Polling]: Detected changes during polling.")
                 self._log_updated_text()
                 self.previous_page_source = current_page_source
                 break
@@ -170,7 +155,7 @@ class JavaScriptChangeDetector:
             element = self.driver.find_element(*element_locator)
             current_text = element.text.strip()
             if current_text and current_text != previous_text:
-                self.console_logger.info(f"[Element Text Change]: Updated text: {current_text}")
+                self.console_logger.info(f"🔄 [Element Text Change]: Updated text: {current_text}")
                 return current_text
             return previous_text
         except Exception as e:
