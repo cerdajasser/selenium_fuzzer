@@ -21,9 +21,9 @@ class JavaScriptChangeDetector:
         self.console_logger.addHandler(console_handler)
         self.console_logger.setLevel(logging.INFO)
 
-        # Set up Chrome DevTools Protocol (CDP) session if devtools are enabled
-        self.devtools = driver.execute_cdp_cmd
         if self.enable_devtools:
+            # Set up Chrome DevTools Protocol (CDP) session if devtools are enabled
+            self.devtools = driver.execute_cdp_cmd
             self._initialize_devtools()
 
         # Initialize JavaScript log storage on the page
@@ -44,8 +44,11 @@ class JavaScriptChangeDetector:
 
     def capture_network_activity(self):
         """Capture and analyze network activity for anomalies"""
+        if not self.enable_devtools:
+            return
+
         try:
-            # This is a placeholder for capturing network activity
+            # Placeholder for capturing network activity
             self.console_logger.info("Capturing network activity is enabled. Custom event handling not yet implemented.")
         except Exception as e:
             self.logger.error(f"Error capturing network activity: {e}")
