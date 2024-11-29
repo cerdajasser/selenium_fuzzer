@@ -16,6 +16,7 @@ class Fuzzer:
         self.url = url
         self.js_change_detector = js_change_detector
         self.logger = self.setup_logger()
+        self.console_logger = self.setup_console_logger()
 
     def setup_logger(self):
         """
@@ -32,21 +33,36 @@ class Fuzzer:
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(logging.DEBUG)
 
-        # Create a console handler for additional output (optional)
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
         # Set formatter for handlers
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
 
         # Add handlers to the logger
         if not any(isinstance(handler, logging.FileHandler) and handler.baseFilename == file_handler.baseFilename for handler in logger.handlers):  # Avoid adding multiple handlers if the logger already has them
             logger.addHandler(file_handler)
-            logger.addHandler(console_handler)
 
         return logger
+
+    def setup_console_logger(self):
+        """
+        Set up a console logger for more readable console output.
+        """
+        console_logger = logging.getLogger('console_logger')
+        console_logger.setLevel(logging.INFO)
+
+        # Create a console handler for additional output
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        # Set a simpler formatter for console output
+        console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(console_formatter)
+
+        # Avoid adding multiple handlers if the logger already has one
+        if not console_logger.hasHandlers():
+            console_logger.addHandler(console_handler)
+
+        return console_logger
 
     def detect_inputs(self):
         """
@@ -55,9 +71,11 @@ class Fuzzer:
         try:
             input_fields = self.driver.find_elements(By.TAG_NAME, "input")
             self.logger.info(f"Found {len(input_fields)} input elements.")
+            self.console_logger.info(f"Found {len(input_fields)} input elements on the page.")
             return input_fields
         except Exception as e:
             self.logger.error(f"Error detecting input fields: {e}")
+            self.console_logger.error(f"❌ Error detecting input fields: {e}")
             return []
 
     def fuzz_field(self, input_element, payloads, delay=1):
@@ -80,9 +98,6 @@ class Fuzzer:
                     # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
 
-                    # Wait a moment to ensure JavaScript clearing is complete
-                    time.sleep(0.5)
-
                     # Set value using JavaScript to avoid front-end interference
                     self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
 
@@ -90,7 +105,7 @@ class Fuzzer:
                     input_element.send_keys(Keys.TAB)
                     input_element.send_keys(Keys.ENTER)
 
-                    # Wait for input value to be updated using an explicit wait
+                    # Wait until the input element value matches the payload
                     WebDriverWait(self.driver, delay).until(
                         lambda driver: self.driver.execute_script("return arguments[0].value;", input_element) == payload
                     )
@@ -104,17 +119,22 @@ class Fuzzer:
                         retry_count += 1
 
                 if success:
-                    self.logger.info(f"\n>>> Payload '{payload}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.\n")
+                    self.logger.info(f"Payload '{payload}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
+                    self.console_logger.info(f"✅ Successfully entered payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
                 else:
-                    self.logger.warning(f"\n!!! Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'\n")
+                    self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
+                    self.console_logger.warning(f"⚠️ Failed to verify payload '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
 
                 # Check for JavaScript changes after input
                 self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()  # Capture JS logs after fuzzing
 
             except (NoSuchElementException, TimeoutException, WebDriverException) as e:
-                self.logger.error(f"\n!!! Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
+                self.logger.error(f"Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
             except Exception as e:
-                self.logger.error(f"\n!!! Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}\n")
+                self.logger.error(f"Unexpected Error Inserting Payload into Field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                self.console_logger.error(f"❌ Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
 
     def detect_dropdowns(self, selector="select", delay=10):
         """
@@ -128,17 +148,21 @@ class Fuzzer:
             # Locate dropdown elements using the provided CSS selector
             dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
             self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
+            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
 
             if not dropdown_elements:
                 self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
+                self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
                 return
 
             for idx, dropdown_element in enumerate(dropdown_elements):
-                self.logger.info(f"\n>>> Interacting with dropdown {idx + 1} on the page.")
+                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
+                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
                 self.fuzz_dropdown(dropdown_element, delay)
 
         except Exception as e:
             self.logger.error(f"Error detecting dropdowns: {e}")
+            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
@@ -152,21 +176,25 @@ class Fuzzer:
             select = Select(dropdown_element)
             options = select.options
             for index, option in enumerate(options):
-                # Select each option by index using an explicit wait for it to become selectable
+                # Select each option by index using an explicit wait
                 select.select_by_index(index)
-                self.logger.info(f"\n>>> Selected option '{option.text}' from dropdown.")
+                self.logger.info(f"Selected option '{option.text}' from dropdown.")
+                self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
 
                 # Explicitly wait for the dropdown interaction to reflect changes on the page
                 WebDriverWait(self.driver, delay).until(
                     EC.staleness_of(option)
                 )
 
-                # Check for changes using JavaScript change detection
+                # Check for JavaScript changes
                 self.js_change_detector.check_for_js_changes(delay=delay)
+                self.js_change_detector.capture_js_console_logs()  # Capture JS logs after each option is selected
         except (TimeoutException, NoSuchElementException) as e:
             self.logger.error(f"Error fuzzing dropdown: {e}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
         except Exception as e:
             self.logger.error(f"Unexpected error fuzzing dropdown: {e}")
+            self.console_logger.error(f"❌ Unexpected error fuzzing dropdown: {e}")
 
     def analyze_response(self):
         """
@@ -189,12 +217,13 @@ class Fuzzer:
 # Example usage
 if __name__ == "__main__":
     from selenium import webdriver
-    from selenium_fuzzer.js_change_detector import JSChangeDetector
+    from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 
     # Create a driver instance and JS change detector
-    driver = webdriver.Chrome()
-    js_change_detector = JSChangeDetector(driver)
+    chrome_options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(options=chrome_options)
+    js_change_detector = JavaScriptChangeDetector(driver)
 
     # Instantiate and run the fuzzer
     fuzzer = Fuzzer(driver, js_change_detector, "https://example.com")
-    fuzzer.run_fuzz(delay=1)
+    fuzzer.run_fuzz(delay=1) 
