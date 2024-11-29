@@ -13,6 +13,7 @@ from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
 import time
+import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -34,7 +35,7 @@ def main():
     logging.basicConfig(level=Config.LOG_LEVEL, filename=log_filename, 
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)  # Explicitly use stdout
     console_handler.setLevel(logging.INFO)
     logger.addHandler(console_handler)
 
@@ -67,20 +68,21 @@ def main():
                 input_fields = fuzzer.detect_inputs()
                 if not input_fields:
                     logger.warning("\n!!! No input fields detected on the page.\n")
-                else:
-                    print("Detected input fields:")
-                    for idx, field in enumerate(input_fields):
-                        field_type = field.get_attribute("type") or "unknown"
-                        field_name = field.get_attribute("name") or "Unnamed"
-                        print(f"{idx}: {field_name} (type: {field_type})")
+                    return
 
-                    selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
-                    selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+                print("Detected input fields:")
+                for idx, field in enumerate(input_fields):
+                    field_type = field.get_attribute("type") or "unknown"
+                    field_name = field.get_attribute("name") or "Unnamed"
+                    print(f"{idx}: {field_name} (type: {field_type})")
 
-                    payloads = generate_safe_payloads()
-                    for idx in selected_indices:
-                        if 0 <= idx < len(input_fields):
-                            fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
+                selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+                selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+                payloads = generate_safe_payloads()
+                for idx in selected_indices:
+                    if 0 <= idx < len(input_fields):
+                        fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
             except (NoSuchElementException, TimeoutException) as e:
                 logger.error(f"\n!!! Error during input fuzzing: {e}\n")
