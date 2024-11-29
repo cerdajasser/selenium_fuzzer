@@ -2,30 +2,26 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
-from selenium_fuzzer.config import Config  # Import Config from config module
+from selenium_fuzzer.config import Config
 
 def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
-    # Configure Chrome options
     options = Options()
-    if headless or Config.SELENIUM_HEADLESS:
+    if headless:
         options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    
-    # Enable DevTools if configured
-    if Config.ENABLE_DEVTOOLS:
-        options.add_argument("--auto-open-devtools-for-tabs")
 
-    # Enable browser logging within options (Selenium 4+ approach)
-    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+    # Enable browser logging
+    capabilities = DesiredCapabilities.CHROME
+    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
 
     # Use the ChromeDriver path from config.py
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create the WebDriver instance without deprecated desired_capabilities
-    driver = webdriver.Chrome(service=service, options=options)
+    # Create the WebDriver instance without `desired_capabilities` (deprecated, use `options` with capabilities)
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
     return driver

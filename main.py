@@ -44,7 +44,8 @@ def main():
         driver = None
 
         try:
-            headless = args.headless if args.headless else Config.SELENIUM_HEADLESS
+            # Use either the command line --headless argument or the default Config setting
+            headless = args.headless or Config.SELENIUM_HEADLESS
             driver = create_driver(headless=headless)
 
             # Initialize JavaScriptChangeDetector with DevTools option
@@ -103,7 +104,7 @@ def main():
                 logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
     except NameError as e:
-        print(f"\n!!! NameError: {e}\n")
+        logger.error(f"\n!!! NameError: {e}\n")
         raise
 
 if __name__ == "__main__":
