@@ -28,7 +28,7 @@ class JavaScriptChangeDetector:
             self.devtools = driver.execute_cdp_cmd
             self._initialize_devtools()
 
-        # Inject JavaScript logging initialization to capture console logs
+        # Inject JavaScript to capture console logs
         self._initialize_js_logging()
 
     def _initialize_devtools(self):
@@ -52,6 +52,7 @@ class JavaScriptChangeDetector:
                 (function() {
                     var oldLog = console.log;
                     var oldError = console.error;
+                    var oldWarn = console.warn;
                     window.loggedMessages = [];
                     console.log = function(message) {
                         window.loggedMessages.push({level: "INFO", message: message});
@@ -60,6 +61,10 @@ class JavaScriptChangeDetector:
                     console.error = function(message) {
                         window.loggedMessages.push({level: "ERROR", message: message});
                         oldError.apply(console, arguments);
+                    };
+                    console.warn = function(message) {
+                        window.loggedMessages.push({level: "WARN", message: message});
+                        oldWarn.apply(console, arguments);
                     };
                 })();
             """
@@ -87,6 +92,9 @@ class JavaScriptChangeDetector:
                     if log_level == "ERROR":
                         self.logger.error(f"JavaScript Error: {log_message}")
                         self.console_logger.error(f"🚨 [JavaScript Error]: {log_message}")
+                    elif log_level == "WARN":
+                        self.logger.warning(f"JavaScript Warning: {log_message}")
+                        self.console_logger.warning(f"⚠️ [JavaScript Warning]: {log_message}")
                     else:
                         self.logger.info(f"JavaScript Log: {log_message}")
                         self.console_logger.info(f"ℹ️ [JavaScript Log]: {log_message}")
