@@ -1,106 +1,110 @@
 
 # Selenium Fuzzer
 
-Selenium Fuzzer is a web fuzzing tool that uses Selenium to interact with and test dynamic websites. It automates the process of inputting test data into forms, selecting dropdown values, and monitoring JavaScript-based changes on webpages to detect errors or unexpected behaviors.
+The Selenium Fuzzer is a tool designed to perform automated testing on web pages using the Selenium WebDriver. It identifies and interacts with form fields, dropdowns, and other page elements to test the robustness of web applications. The tool includes JavaScript error detection and tracking features.
 
 ## Features
-- **Fuzz Input Fields**: Automatically fuzz input fields on a target webpage with various payloads to test for vulnerabilities or unexpected behaviors.
-- **Check Dropdown Menus**: Iteratively select each option in dropdown menus using a configurable selector and observe page responses for JavaScript updates or errors.
-- **JavaScript Change Detection**: Monitor and detect changes in the page's JavaScript after interacting with input fields or dropdown menus.
-- **Flexible Logging**: Create new log files for each target webpage, including both file and console outputs for detailed monitoring.
+
+- Fuzzing of input fields using pre-defined payloads.
+- Dropdown interaction and validation.
+- JavaScript error detection using both injected JavaScript and Chrome DevTools.
+- State tracking and snapshot comparison before and after interactions.
+
+## Requirements
+
+- Python 3.8+
+- Google Chrome and ChromeDriver
 
 ## Installation
-### Prerequisites
-- **Python 3.8 or higher**
-- **Google Chrome** (latest version recommended)
-- **ChromeDriver**: Make sure to install ChromeDriver and update the path in the configuration if necessary.
 
-### Install Required Dependencies
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/cerdajasser/selenium_fuzzer.git
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/yourusername/selenium_fuzzer.git
    cd selenium_fuzzer
    ```
 
-2. Set up a virtual environment (optional but recommended):
-   ```sh
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install the required dependencies:
-   ```sh
+2. **Install Dependencies**:
+   ```bash
    pip install -r requirements.txt
    ```
 
-## Configuration
-The configuration file (`selenium_fuzzer/config.py`) includes important settings such as:
-- **CHROMEDRIVER_PATH**: The path to your ChromeDriver executable (default is `/usr/bin/chromedriver`).
-- **SELENIUM_HEADLESS**: A boolean flag to run Chrome in headless mode.
-- **LOG_LEVEL** and **LOG_FILE**: Logging configuration for both console and file outputs.
-
-Make sure to update `CHROMEDRIVER_PATH` to the correct location of ChromeDriver on your system.
+3. **Set Environment Variables** (optional):
+   You can configure the following environment variables:
+   - `CHROMEDRIVER_PATH`: Path to ChromeDriver.
+   - `SELENIUM_HEADLESS`: Set to `False` to run ChromeDriver in GUI mode (default: `True`).
+   - `LOG_LEVEL`: Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`).
+   - `ENABLE_DEVTOOLS`: Set to `True` to enable Chrome DevTools Protocol for capturing JavaScript and network logs.
+   - `TRACK_STATE`: Set to `True` to enable state tracking before and after fuzzing.
 
 ## Usage
-To run Selenium Fuzzer, use the `main.py` script with the following command-line arguments:
 
-```sh
+Run the fuzzer on a target URL:
+
+```bash
 python main.py [URL] [OPTIONS]
 ```
 
+### Arguments
+
+- `url`: The target URL to run the fuzzer against.
+
 ### Options
-- **URL**: The URL of the target webpage to fuzz.
+
 - `--headless`: Run Chrome in headless mode.
-- `--delay DELAY`: Set delay between fuzzing attempts (in seconds). Default is 1 second.
-- `--fuzz-fields`: Fuzz all input fields on the page.
+- `--delay`: Delay between fuzzing attempts (in seconds).
+- `--fuzz-fields`: Fuzz input fields on the page.
 - `--check-dropdowns`: Check dropdown menus on the page.
-- `--dropdown-selector SELECTOR`: Set the CSS selector for the dropdown menus to be fuzzed. Default is `"select"`.
+- `--devtools`: Enable Chrome DevTools Protocol to capture JavaScript and network activity.
+- `--track-state`: Track the state of the webpage before and after fuzzing.
 
-### Example Usage
-1. To fuzz input fields on a webpage:
-   ```sh
-   python main.py http://example.com --fuzz-fields --delay 2
-   ```
-2. To fuzz input fields and check dropdown menus:
-   ```sh
-   python main.py http://example.com --fuzz-fields --check-dropdowns --headless
-   ```
-3. To use a custom selector for dropdown menus:
-   ```sh
-   python main.py http://example.com --check-dropdowns --dropdown-selector "#specific-dropdown" --headless
-   ```
+### Example
 
-### Logs
-Selenium Fuzzer logs its activities to both a log file (located in the `/log` directory) and the console. The log file name includes the timestamp for easy identification. Console and file logs provide:
-- HTTP status of requests
-- Changes detected in the webpage after each fuzzing attempt
-- Selected dropdown values and their impact on the page
-- Detailed information for input field interactions and JavaScript changes
-- Improved readability for console output, making it easier to follow the fuzzing process
+```bash
+python main.py --fuzz-fields --check-dropdowns --devtools http://localhost:8000/index.html
+```
 
-## New Improvements
-- **Configurable Dropdown Selectors**: You can now specify the CSS selector to locate dropdown elements, making the tool more flexible for different page structures.
-- **Graceful Exit**: Improved handling of exceptions to ensure the script quits gracefully and provides helpful debug information.
-- **Detailed Logging**: Added more detailed logging, including logging JavaScript changes and the status of dropdown interactions, making debugging easier.
-- **Consistent Console Output**: Both dropdown and input field interactions now provide consistent and human-readable console output to match logging standards.
-### JavaScript Event Analysis and Network Monitoring
-Selenium Fuzzer now has the ability to capture JavaScript errors and monitor network activity using Chrome DevTools Protocol. To enable this feature, ensure `ENABLE_DEVTOOLS` is set to `True` in the `config.py` file.
+## Configuration
 
-This feature provides the following capabilities:
-- **JavaScript Console Log Analysis**: Capture JavaScript console logs, including errors and warnings.
-- **Network Request Monitoring**: Log all network requests made by the page to identify abnormal or anomalous behavior.
+You can modify default settings through the `config.py` file:
 
-These features are configurable via `config.py`:
-- **ENABLE_DEVTOOLS**: Set to `True` or `False` to enable or disable DevTools integration.
-- **DEVTOOLS_LOG_LEVEL**: Define the verbosity of logs for DevTools (e.g., `DEBUG`, `INFO`).
-## Troubleshooting
-- **ChromeDriver Path**: Ensure `CHROMEDRIVER_PATH` in `config.py` points to the correct path of ChromeDriver on your system.
-- **Permissions**: If you encounter permission errors, try running the script with elevated privileges or update the permissions on `chromedriver`.
-- **Dynamic JavaScript Changes**: If dynamic JavaScript changes aren't being detected, make sure that the elements to be monitored are correctly specified in the `JavaScriptChangeDetector` module.
-- **Dropdown Element Not Found**: If you encounter errors related to dropdown elements, try updating the `--dropdown-selector` argument to match the specific structure of the page you're testing.
+```python
+# Path to ChromeDriver
+CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
+
+# Selenium Chrome Options
+SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'False') == 'True'  # Run in GUI mode by default
+```
+
+## Logging
+
+The fuzzer provides both file-based and console-based logging:
+
+- Logs are saved in the `log/` directory.
+- Console output provides an overview of current actions, JavaScript logs, and potential errors.
+
+## Example Log Output
+
+When running the fuzzer, you'll see outputs like this:
+
+```plaintext
+Starting ChromeDriver. GUI Mode: Enabled
+[2024-11-30 14:31:07,417] ℹ️ JavaScript for logging successfully injected.
+=== Starting the Selenium Fuzzer ===
+>>> Accessing URL: http://localhost:8000/inputtypes.com/index.html
+=== Fuzzing Input Fields on the Page ===
+Found 1 suitable input elements on the page.
+Detected input fields:
+0: Unnamed (type: text)
+```
 
 ## Contributing
-Feel free to submit issues or pull requests to improve the Selenium Fuzzer. Contributions are always welcome.
+
+Contributions are welcome! Please submit a pull request or open an issue for any feature requests, bug reports, or improvements.
 
 ## License
+
 This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+## Contact
+
+For more information or support, please reach out to the repository maintainer at your.email@example.com.
