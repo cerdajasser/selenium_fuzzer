@@ -1,14 +1,11 @@
 import logging
 import argparse
-import os
 import time
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
-from selenium_fuzzer.utils import generate_safe_payloads
-from selenium_fuzzer.config import Config  # Import Config class
+from selenium_fuzzer.selenium_driver import create_driver
+from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
-from selenium_fuzzer.selenium_driver import create_driver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -21,90 +18,80 @@ def main():
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
-    # Ensure Config is properly accessed for setting up logging and other parameters.
+    # Set up logging with dynamic filename in the /log folder
+    log_filename = Config.get_log_file_path()
+    logging.basicConfig(level=getattr(logging, Config.LOG_LEVEL.upper(), logging.DEBUG),
+                        filename=log_filename,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    # Set up console logging
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+    console_handler.setFormatter(console_formatter)
+
+    # Avoid adding multiple handlers
+    if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+        logger.addHandler(console_handler)
+
     try:
-        # Set up logging with dynamic filename in the /log folder
-        log_filename = Config.get_log_file_path()
-        logging.basicConfig(level=getattr(logging, Config.LOG_LEVEL.upper(), logging.DEBUG),
-                            filename=log_filename,
-                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        logger = logging.getLogger(__name__)
+        driver = create_driver(headless=args.headless if args.headless else Config.SELENIUM_HEADLESS)
 
-        # Set up console logging
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
-        console_handler.setFormatter(console_formatter)
+        # Initialize JavaScriptChangeDetector with DevTools option
+        js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
 
-        # Avoid adding multiple handlers
-        if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
-            logger.addHandler(console_handler)
+        logger.info("\n=== Starting the Selenium Fuzzer ===\n")
+        driver.get(args.url)
+        logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
-        # Create the WebDriver using `create_driver` with logging enabled
-        driver = None
+        # Instantiate the Fuzzer with the provided URL and state tracking option
+        fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
 
-        try:
-            headless = args.headless if args.headless else Config.SELENIUM_HEADLESS
-            driver = create_driver(headless=headless)
+        if args.fuzz_fields:
+            logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
+            try:
+                input_fields = fuzzer.detect_inputs()
+                if not input_fields:
+                    logger.warning("\n!!! No input fields detected on the page.\n")
+                    return
 
-            # Initialize JavaScriptChangeDetector with DevTools option
-            js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
+                print("Detected input fields:")
+                for idx, field in enumerate(input_fields):
+                    field_type = field.get_attribute("type") or "unknown"
+                    field_name = field.get_attribute("name") or "Unnamed"
+                    print(f"{idx}: {field_name} (type: {field_type})")
 
-            logger.info("\n=== Starting the Selenium Fuzzer ===\n")
-            driver.get(args.url)
-            logger.info(f"\n>>> Accessing URL: {args.url}\n")
+                selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+                selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
 
-            # Instantiate the Fuzzer with the provided URL and state tracking option
-            fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
+                payloads = generate_safe_payloads()
+                for idx in selected_indices:
+                    if 0 <= idx < len(input_fields):
+                        fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
-            if args.fuzz_fields:
-                logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
-                try:
-                    input_fields = fuzzer.detect_inputs()
-                    if not input_fields:
-                        logger.warning("\n!!! No input fields detected on the page.\n")
-                        return
+            except (NoSuchElementException, TimeoutException) as e:
+                logger.error(f"\n!!! Error during input fuzzing: {e}\n")
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
 
-                    print("Detected input fields:")
-                    for idx, field in enumerate(input_fields):
-                        field_type = field.get_attribute("type") or "unknown"
-                        field_name = field.get_attribute("name") or "Unnamed"
-                        print(f"{idx}: {field_name} (type: {field_type})")
+        if args.check_dropdowns:
+            logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
+            try:
+                fuzzer.fuzz_dropdowns(delay=args.delay)
+            except (NoSuchElementException, TimeoutException) as e:
+                logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
 
-                    selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
-                    selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
-
-                    payloads = generate_safe_payloads()
-                    for idx in selected_indices:
-                        if 0 <= idx < len(input_fields):
-                            fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
-
-                except (NoSuchElementException, TimeoutException) as e:
-                    logger.error(f"\n!!! Error during input fuzzing: {e}\n")
-                except Exception as e:
-                    logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
-
-            if args.check_dropdowns:
-                logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
-                try:
-                    fuzzer.fuzz_dropdowns(delay=args.delay)
-                except (NoSuchElementException, TimeoutException) as e:
-                    logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
-                except Exception as e:
-                    logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
-
-        except (WebDriverException, TimeoutException) as e:
-            logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
-        except Exception as e:
-            logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
-        finally:
-            if driver:
-                driver.quit()
-                logger.info("\n>>> Closed the browser and exited gracefully.\n")
-
-    except NameError as e:
-        print(f"\n!!! NameError: {e}\n")
-        raise
+    except (WebDriverException, TimeoutException) as e:
+        logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
+    except Exception as e:
+        logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
+    finally:
+        if driver:
+            driver.quit()
+            logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
 if __name__ == "__main__":
     main()
