@@ -1,11 +1,14 @@
 import logging
 import argparse
+import os
 import time
-from selenium_fuzzer.selenium_driver import create_driver
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium_fuzzer.selenium_driver import create_driver
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -35,8 +38,11 @@ def main():
     if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
         logger.addHandler(console_handler)
 
+    driver = None
     try:
-        driver = create_driver(headless=args.headless if args.headless else Config.SELENIUM_HEADLESS)
+        # Create the WebDriver using `create_driver` with logging enabled
+        headless = args.headless if args.headless else Config.SELENIUM_HEADLESS
+        driver = create_driver(headless=headless)
 
         # Initialize JavaScriptChangeDetector with DevTools option
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
