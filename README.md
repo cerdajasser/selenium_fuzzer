@@ -107,4 +107,4 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 ## Contact
 
-For more information or support, please reach out to the repository maintainer at your.email@example.com.
+For more information or support, please reach out to the repository maintainer at cerdajasser@gmail.com
