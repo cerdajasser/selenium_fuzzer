@@ -270,24 +270,11 @@ class Fuzzer:
                 self.logger.info("No changes detected in the full page source.")
                 self.console_logger.info("ℹ️ [No Changes]: The page content appears to be stable, with no detected changes.")
 
-        # Compare specific elements if they were tracked
-        for element_id in before_snapshot['elements']:
-            before_element = before_snapshot['elements'].get(element_id)
-            after_element = after_snapshot['elements'].get(element_id)
-            if before_element != after_element:
-                self.logger.info(f"Detected changes in element '{element_id}'.")
-                self.console_logger.info(f"⚠️ Detected changes in element '{element_id}'.")
+        # Compare specific tracked elements
+        for element_id, before_element_html in before_snapshot.get('elements', {}).items():
+            after_element_html = after_snapshot['elements'].get(element_id)
+            if before_element_html != after_element_html:
+                self.logger.info(f"Changes detected in element '{element_id}'.")
+                self.console_logger.info(f"✅ [Detected Changes]: The element '{element_id}' has changed.")
             else:
                 self.logger.info(f"No changes detected in element '{element_id}'.")
-                self.console_logger.info(f"No changes detected in element '{element_id}'.")
-
-        # Compare URLs
-        if before_snapshot['current_url'] != after_snapshot['current_url']:
-            self.logger.warning(f"URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
-            self.console_logger.warning(f"⚠️ URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
-
-        # Compare cookies
-        if before_snapshot['cookies'] != after_snapshot['cookies']:
-            self.logger.warning("Cookies have changed between snapshots.")
-            self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
-

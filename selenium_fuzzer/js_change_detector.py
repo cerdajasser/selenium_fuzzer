@@ -106,36 +106,7 @@ class JavaScriptChangeDetector:
             self.logger.error(f"Error capturing JavaScript console logs: {e}")
             self.console_logger.error(f"Error capturing JavaScript console logs: {e}")
 
-        # Additionally capture console logs using Chrome DevTools if enabled
-        if self.enable_devtools:
-            self._capture_devtools_console_logs()
-
-    def _capture_devtools_console_logs(self):
-        """Capture console logs using Chrome DevTools Protocol (CDP)"""
-        try:
-            # Capture logs from the browser console using DevTools
-            log_entries = self.driver.get_log('browser')
-
-            for entry in log_entries:
-                level = entry.get('level', '').upper()
-                message = entry.get('message', '')
-
-                if level == 'SEVERE':
-                    self.logger.error(f"JavaScript Error from DevTools: {message}")
-                    self.console_logger.error(f"🚨 [JavaScript Error]: {message}")
-                elif level == 'WARNING':
-                    self.logger.warning(f"JavaScript Warning from DevTools: {message}")
-                    self.console_logger.warning(f"⚠️ [JavaScript Warning]: {message}")
-                else:
-                    self.logger.info(f"JavaScript Log from DevTools: {message}")
-                    self.console_logger.info(f"ℹ️ [JavaScript Log]: {message}")
-
-            self.console_logger.info("ℹ️ [JavaScript Log]: Console log retrieval from DevTools completed.")
-        except WebDriverException as e:
-            self.logger.error(f"Error capturing console logs from DevTools: {e}")
-            self.console_logger.error(f"Error capturing console logs from DevTools: {e}")
-
-    def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
+    def detect_changes(self, success_message=None, error_keywords=None, delay=2):
         """
         Check for JavaScript changes or error messages on the page.
 
