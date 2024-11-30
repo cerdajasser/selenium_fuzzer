@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
-from selenium_fuzzer.config import Config  # Import Config
+from selenium_fuzzer.config import Config
 
 def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
@@ -15,13 +15,12 @@ def create_driver(headless: bool = False):
     options.add_argument("--disable-dev-shm-usage")
 
     # Enable browser logging
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
     # Use the ChromeDriver path from config.py
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create driver without 'desired_capabilities' argument as it's deprecated
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    # Create the WebDriver without the `desired_capabilities` argument
+    driver = webdriver.Chrome(service=service, options=options)
     return driver
