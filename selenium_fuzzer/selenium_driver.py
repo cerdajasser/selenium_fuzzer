@@ -8,9 +8,8 @@ def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
     if headless:
-        options.add_argument("--headless")  # Only add this if headless is True
+        options.add_argument("--headless")
     else:
-        # Logging a message to ensure visibility into what mode the driver is being set up with
         print("Running in non-headless mode, ChromeDriver window will be visible.")
 
     # Common Chrome options
@@ -20,15 +19,13 @@ def create_driver(headless: bool = False):
     options.add_argument("--disable-dev-shm-usage")
 
     # Enable browser logging
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
     # Use the ChromeDriver path from Config
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create driver with options and capabilities
-    # Removed `desired_capabilities` as it is deprecated in Selenium 4
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    # Create the WebDriver instance without using the deprecated `desired_capabilities` parameter
+    driver = webdriver.Chrome(service=service, options=options)
 
     return driver
