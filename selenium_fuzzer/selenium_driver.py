@@ -22,7 +22,9 @@ def create_driver(headless: bool = False):
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create driver with options and capabilities
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    # Create driver with options and merged capabilities
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+    
+    driver = webdriver.Chrome(service=service, options=options)
 
     return driver
