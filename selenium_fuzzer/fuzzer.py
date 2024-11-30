@@ -126,7 +126,7 @@ class Fuzzer:
                     self.console_logger.warning(f"⚠️ Failed to verify payload '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
 
                 # Check for JavaScript changes after input
-                self.js_change_detector.detect_changes(delay=delay)
+                self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 
                 # Retrieve and log browser console logs
@@ -190,7 +190,7 @@ class Fuzzer:
                 WebDriverWait(self.driver, delay).until(lambda d: True)
 
                 # Check for JavaScript changes after interacting with dropdown
-                self.js_change_detector.detect_changes(delay=delay)
+                self.js_change_detector.check_for_js_changes(delay=delay)
                 self.js_change_detector.capture_js_console_logs()
 
                 # Retrieve and log browser console logs
