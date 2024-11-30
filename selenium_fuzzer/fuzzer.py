@@ -1,12 +1,12 @@
 import logging
 import time
+import difflib
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException
 from urllib.parse import urlparse
-import difflib
 from selenium.webdriver.remote.webelement import WebElement
 
 class Fuzzer:
@@ -128,7 +128,7 @@ class Fuzzer:
                 # Check for JavaScript changes after input
                 self.js_change_detector.capture_js_console_logs()
 
-            except (NoSuchElementException, TimeoutException, WebDriverException) as e:
+            except (NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException) as e:
                 self.logger.error(f"Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
                 self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
             except Exception as e:
@@ -188,7 +188,7 @@ class Fuzzer:
                 # Check for JavaScript changes after interacting with dropdown
                 self.js_change_detector.capture_js_console_logs()
 
-        except Exception as e:
+        except (StaleElementReferenceException, NoSuchElementException, WebDriverException, TimeoutException) as e:
             self.logger.error(f"Error fuzzing dropdown: {e}")
             self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
 
@@ -270,11 +270,23 @@ class Fuzzer:
                 self.logger.info("No changes detected in the full page source.")
                 self.console_logger.info("ℹ️ [No Changes]: The page content appears to be stable, with no detected changes.")
 
-        # Compare specific tracked elements
-        for element_id, before_element_html in before_snapshot.get('elements', {}).items():
-            after_element_html = after_snapshot['elements'].get(element_id)
-            if before_element_html != after_element_html:
-                self.logger.info(f"Changes detected in element '{element_id}'.")
-                self.console_logger.info(f"✅ [Detected Changes]: The element '{element_id}' has changed.")
+        # Compare specific elements if they were tracked
+        for element_id in before_snapshot['elements']:
+            before_element = before_snapshot['elements'].get(element_id)
+            after_element = after_snapshot['elements'].get(element_id)
+            if before_element != after_element:
+                self.logger.info(f"Detected changes in element '{element_id}'.")
+                self.console_logger.info(f"⚠️ Detected changes in element '{element_id}'.")
             else:
                 self.logger.info(f"No changes detected in element '{element_id}'.")
+                self.console_logger.info(f"No changes detected in element '{element_id}'.")
+
+        # Compare URLs
+        if before_snapshot['current_url'] != after_snapshot['current_url']:
+            self.logger.warning(f"URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
+            self.console_logger.warning(f"⚠️ URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
+
+        # Compare cookies
+        if before_snapshot['cookies'] != after_snapshot['cookies']:
+            self.logger.warning("Cookies have changed between snapshots.")
+            self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
