@@ -12,9 +12,9 @@
 - [ ] **Detailed HTML Reports**: Enhance the reporting mechanism to generate HTML reports summarizing vulnerabilities discovered during fuzzing, including screenshots and payloads used.
 - [ ] **Log Aggregation and Analysis**: Develop a script to aggregate and analyze log files to help identify patterns or common errors found during fuzzing.
 
-## 4. State Tracking and JavaScript Detection Improvements
-- [ ] **JavaScript Event Analysis**: Improve the JavaScript change detector by integrating browser DevTools to capture network activity, analyze JavaScript events, and detect anomalous behavior.
-- [ ] **Stateful Fuzzing**: Implement state tracking by taking snapshots of the webpage's state and comparing them after fuzzing. This will help detect changes and unexpected behaviors, such as page redirects or content modifications.
+## 4. ~~State Tracking and JavaScript Detection Improvements~~
+- ~~**JavaScript Event Analysis**: Improve the JavaScript change detector by integrating browser DevTools to capture network activity, analyze JavaScript events, and detect anomalous behavior.~~
+- ~~**Stateful Fuzzing**: Implement state tracking by taking snapshots of the webpage's state and comparing them after fuzzing. This will help detect changes and unexpected behaviors, such as page redirects or content modifications.~~
 
 ## 5. Coverage Enhancement
 - [ ] **DOM Traversal**: Expand the project to traverse the DOM and interact with elements deeper in the hierarchy, including dynamically loaded elements or hidden elements that can be made visible using JavaScript.
