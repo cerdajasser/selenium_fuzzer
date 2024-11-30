@@ -8,7 +8,12 @@ def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
     if headless:
-        options.add_argument("--headless")
+        options.add_argument("--headless")  # Only add this if headless is True
+    else:
+        # Logging a message to ensure visibility into what mode the driver is being set up with
+        print("Running in non-headless mode, ChromeDriver window will be visible.")
+
+    # Common Chrome options
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
@@ -22,9 +27,8 @@ def create_driver(headless: bool = False):
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Create driver with options and merged capabilities
-    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
-    
-    driver = webdriver.Chrome(service=service, options=options)
+    # Create driver with options and capabilities
+    # Removed `desired_capabilities` as it is deprecated in Selenium 4
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
 
     return driver
