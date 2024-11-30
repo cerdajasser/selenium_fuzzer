@@ -27,35 +27,38 @@ def main():
     driver = None
     try:
         # Determine headless mode based on arguments or configuration
-        headless = args.headless if args.headless else Config.SELENIUM_HEADLESS
-        print(f"Starting ChromeDriver with headless set to: {headless}")  # Debug print to confirm headless mode status
+        headless = args.headless or Config.SELENIUM_HEADLESS
+        print("Starting the Selenium Fuzzer...\n")
+        logger.info("\n=== Starting the Selenium Fuzzer ===\n")
 
         driver = create_driver(headless=headless)
 
         # Initialize JavaScriptChangeDetector with DevTools option
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
 
-        logger.info("\n=== Starting the Selenium Fuzzer ===\n")
+        print(f"Accessing URL: {args.url}...\n")
+        logger.info(f"\n>>> Accessing the target URL: {args.url}\n")
         driver.get(args.url)
-        logger.info(f"\n>>> Accessing URL: {args.url}\n")
 
         # Instantiate the Fuzzer with the provided URL and state tracking option
+        print("Initializing the Fuzzer...\n")
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
 
         # Fuzz input fields if requested
         if args.fuzz_fields:
-            logger.info("\n=== Fuzzing Input Fields on the Page ===\n")
+            print("Detecting input fields on the page...\n")
+            logger.info("\n=== Detecting Input Fields on the Page ===\n")
             try:
                 input_fields = fuzzer.detect_inputs()
                 if not input_fields:
                     logger.warning("\n!!! No input fields detected on the page.\n")
                     return
 
-                print("Detected input fields:")
+                print(f"Detected {len(input_fields)} input field(s):")
                 for idx, field in enumerate(input_fields):
                     field_type = field.get_attribute("type") or "unknown"
                     field_name = field.get_attribute("name") or "Unnamed"
-                    print(f"{idx}: {field_name} (type: {field_type})")
+                    print(f"  [{idx}] - Name: {field_name}, Type: {field_type}")
 
                 selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
                 selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
@@ -72,6 +75,7 @@ def main():
 
         # Check dropdown menus if requested
         if args.check_dropdowns:
+            print("Checking dropdown menus on the page...\n")
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
                 fuzzer.fuzz_dropdowns(delay=args.delay)
@@ -86,8 +90,8 @@ def main():
         logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
     finally:
         if driver:
-            time.sleep(5)  # Add delay to see if ChromeDriver opens before closing
             driver.quit()
+            print("Closed the browser and exited gracefully.\n")
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
 if __name__ == "__main__":

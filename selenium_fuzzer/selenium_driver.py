@@ -3,14 +3,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 from selenium_fuzzer.config import Config
+import logging
 
 def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
-
-    # Debug statement to ensure headless mode is correctly interpreted
-    print(f"Creating ChromeDriver: Headless mode is set to: {headless}")
-
     if headless:
         options.add_argument("--headless")
     options.add_argument("--disable-gpu")
@@ -26,8 +23,12 @@ def create_driver(headless: bool = False):
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
+    # Log whether headless mode is enabled
+    logger = logging.getLogger(__name__)
+    print(f"Starting ChromeDriver. GUI Mode: {'Enabled' if not headless else 'Headless Mode Enabled'}")
+    logger.info(f"Creating ChromeDriver with GUI mode set to: {'Enabled' if not headless else 'Headless Mode Enabled'}")
+
     # Create driver with options and capabilities
-    # Removed `desired_capabilities` to avoid the error
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
 
     return driver
