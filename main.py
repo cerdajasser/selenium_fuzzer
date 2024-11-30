@@ -27,7 +27,9 @@ def main():
     driver = None
     try:
         # Determine headless mode based on arguments or configuration
-        headless = args.headless or Config.SELENIUM_HEADLESS
+        headless = args.headless if args.headless else Config.SELENIUM_HEADLESS
+        print(f"Starting ChromeDriver with headless set to: {headless}")  # Debug print to confirm headless mode status
+
         driver = create_driver(headless=headless)
 
         # Initialize JavaScriptChangeDetector with DevTools option
@@ -84,6 +86,7 @@ def main():
         logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
     finally:
         if driver:
+            time.sleep(5)  # Add delay to see if ChromeDriver opens before closing
             driver.quit()
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
