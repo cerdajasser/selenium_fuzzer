@@ -16,7 +16,7 @@ class JavaScriptChangeDetector:
         # Set up console handler for logging important information
         self.console_logger = logging.getLogger('console_logger')
         if not self.console_logger.hasHandlers():
-            console_handler = logging.StreamHandler(sys.stdout)  # Output to stdout explicitly
+            console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setLevel(logging.DEBUG)
             console_formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s: %(message)s')
             console_handler.setFormatter(console_formatter)
@@ -108,7 +108,7 @@ class JavaScriptChangeDetector:
 
     def detect_changes(self, success_message=None, error_keywords=None, delay=2):
         """
-        Check for JavaScript changes or error messages on the page.
+        Detect changes on the page or check for error messages.
 
         Args:
             success_message (str): The expected success message after changes are applied.
@@ -141,5 +141,5 @@ class JavaScriptChangeDetector:
                     self.console_logger.warning(f"🚨 [Error Detected]: Keyword '{keyword}' found. Investigate further.")
 
         except WebDriverException as e:
-            self.logger.error(f"Error checking for JavaScript changes: {e}")
-            self.console_logger.error(f"Error checking for JavaScript changes: {e}")
+            self.logger.error(f"Error detecting changes: {e}")
+            self.console_logger.error(f"Error detecting changes: {e}")
