@@ -16,8 +16,7 @@ def create_driver(headless: bool = False):
     options.add_argument("--disable-dev-shm-usage")
 
     # Enable browser logging
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
     # Use the ChromeDriver path from Config
     driver_path = Config.CHROMEDRIVER_PATH
@@ -29,6 +28,6 @@ def create_driver(headless: bool = False):
     logger.info(f"Creating ChromeDriver with GUI mode set to: {'Enabled' if not headless else 'Headless Mode Enabled'}")
 
     # Create driver with options and capabilities
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    driver = webdriver.Chrome(service=service, options=options)
 
     return driver
