@@ -7,7 +7,7 @@ from selenium_fuzzer.config import Config  # Import Config for driver path
 def create_driver(headless: bool = False):
     """Create and configure a Selenium WebDriver instance with logging preferences."""
     options = Options()
-    
+
     if headless:
         options.add_argument("--headless")
     options.add_argument("--disable-gpu")
@@ -15,14 +15,14 @@ def create_driver(headless: bool = False):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    # Set up Chrome logging preferences in capabilities
-    capabilities = DesiredCapabilities.CHROME.copy()
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}  # Enable console logging
+    # Set up Chrome logging preferences in capabilities and add it to options
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})  # Enable console logging
 
     # Use the ChromeDriver path from config.py
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Pass capabilities through options
-    driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
+    # Create the WebDriver instance with service and options
+    driver = webdriver.Chrome(service=service, options=options)
+
     return driver
