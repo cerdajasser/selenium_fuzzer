@@ -22,7 +22,7 @@ def create_driver(headless: bool = False):
     driver_path = Config.CHROMEDRIVER_PATH
     service = Service(executable_path=driver_path)
 
-    # Use `capabilities` instead of `desired_capabilities`
+    # Create driver with options and capabilities
     driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capabilities)
 
     return driver
