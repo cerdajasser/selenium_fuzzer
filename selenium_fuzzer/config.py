@@ -8,7 +8,7 @@ class Config:
     CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
 
     # Selenium Chrome Options
-    SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'True') == 'True'  # Run in headless mode by default
+    SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'False') == 'True'  # Run with GUI by default
 
     # Logging Configuration
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')  # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
