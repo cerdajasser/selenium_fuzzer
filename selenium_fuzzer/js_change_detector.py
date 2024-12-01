@@ -1,6 +1,8 @@
 import logging
 import time
+import os
 from selenium.common.exceptions import WebDriverException
+from selenium_fuzzer.config import Config
 import sys
 
 class JavaScriptChangeDetector:
@@ -10,19 +12,9 @@ class JavaScriptChangeDetector:
         """
         self.driver = driver
         self.enable_devtools = enable_devtools
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
-
-        # Set up console handler for logging important information
-        self.console_logger = logging.getLogger('console_logger')
-        if not self.console_logger.hasHandlers():
-            console_handler = logging.StreamHandler(sys.stdout)  # Output to stdout explicitly
-            console_handler.setLevel(logging.DEBUG)
-            console_formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s: %(message)s')
-            console_handler.setFormatter(console_formatter)
-            self.console_logger.addHandler(console_handler)
-        self.console_logger.setLevel(logging.DEBUG)
-
+        self.logger = self.setup_logger()
+        self.console_logger = self.setup_console_logger()
+        
         # Initialize Chrome DevTools Protocol (CDP) session if devtools are enabled
         if self.enable_devtools:
             self.devtools = driver.execute_cdp_cmd
@@ -30,6 +22,51 @@ class JavaScriptChangeDetector:
 
         # Inject JavaScript to capture console logs
         self._initialize_js_logging()
+
+    def setup_logger(self):
+        """
+        Set up a logger that creates a new log file for JavaScriptChangeDetector.
+        """
+        domain = "js_change_detector"
+        log_filename = os.path.join(Config.LOG_FOLDER, f"{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
+
+        logger = logging.getLogger(f"js_change_detector_{domain}")
+        logger.setLevel(logging.DEBUG)
+
+        # Create a file handler for the logger
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(logging.DEBUG)
+
+        # Set formatter for handlers
+        formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+
+        # Avoid adding multiple handlers if the logger already has one
+        if not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers):
+            logger.addHandler(file_handler)
+
+        return logger
+
+    def setup_console_logger(self):
+        """
+        Set up a console logger for more readable console output.
+        """
+        console_logger = logging.getLogger('console_logger')
+        console_logger.setLevel(logging.INFO)
+
+        # Create a console handler for additional output
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+
+        # Set a simpler formatter for console output
+        console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+        console_handler.setFormatter(console_formatter)
+
+        # Avoid adding multiple handlers if the logger already has one
+        if not console_logger.hasHandlers():
+            console_logger.addHandler(console_handler)
+
+        return console_logger
 
     def _initialize_devtools(self):
         """Initialize Chrome DevTools Protocol for network and JS event analysis"""

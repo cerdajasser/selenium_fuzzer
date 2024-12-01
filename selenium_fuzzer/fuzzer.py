@@ -43,7 +43,7 @@ class Fuzzer:
         formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
 
-        # Add handlers to the logger if not already added
+        # Ensure the logger does not already have a file handler, to avoid duplicate log files
         if not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers):
             logger.addHandler(file_handler)
 
@@ -64,8 +64,8 @@ class Fuzzer:
         console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
         console_handler.setFormatter(console_formatter)
 
-        # Avoid adding multiple handlers if the logger already has one
-        if not console_logger.hasHandlers():
+        # Ensure the logger does not already have a console handler, to avoid duplicate console logs
+        if not any(isinstance(handler, logging.StreamHandler) for handler in console_logger.handlers):
             console_logger.addHandler(console_handler)
 
         return console_logger

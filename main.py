@@ -1,5 +1,6 @@
 import logging
 import argparse
+import os
 import time
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
@@ -7,7 +8,32 @@ from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.selenium_driver import create_driver
-from selenium_fuzzer.logger import setup_logger
+
+def setup_logger(url):
+    """
+    Set up a logger that creates a new log file for each website.
+    """
+    parsed_url = os.path.basename(url)
+    domain = parsed_url.replace(":", "_").replace(".", "_")
+    # Use the log folder from Config and ensure it's consistent
+    log_filename = os.path.join(Config.LOG_FOLDER, f"selenium_fuzzer_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
+
+    logger = logging.getLogger(f"selenium_fuzzer_{domain}")
+    logger.setLevel(logging.DEBUG)
+
+    # Create a file handler for the logger
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setLevel(logging.DEBUG)
+
+    # Set formatter for handlers
+    formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+
+    # Avoid adding multiple handlers if the logger already has one
+    if not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers):
+        logger.addHandler(file_handler)
+
+    return logger
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
