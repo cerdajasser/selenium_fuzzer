@@ -10,6 +10,10 @@ The Selenium Fuzzer is a tool designed to perform automated testing on web pages
 - JavaScript error detection using both injected JavaScript and Chrome DevTools.
 - State tracking and snapshot comparison before and after interactions.
 
+## In action 
+
+https://github.com/user-attachments/assets/51089107-1098-438c-bd3e-9472e2edb1ae
+
 ## Requirements
 
 - Python 3.8+
@@ -45,9 +49,7 @@ python main.py [URL] [OPTIONS]
 ```
 
 
-## In action 
 
-https://github.com/user-attachments/assets/51089107-1098-438c-bd3e-9472e2edb1ae
 
 ### Arguments
 
