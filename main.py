@@ -22,7 +22,7 @@ def main():
 
     # Set up logging
     log_file_path = Config.get_log_file_path()
-    logger = setup_logger(args.url, log_file_path, log_level=getattr(logging, Config.LOG_LEVEL.upper(), logging.DEBUG))
+    logger = setup_logger(url=args.url, log_file=log_file_path)
 
     # Create the WebDriver using `create_driver` with logging enabled
     driver = None
