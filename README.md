@@ -1,16 +1,20 @@
 
 # Selenium Fuzzer
 
-The Selenium Fuzzer is a tool designed to perform automated testing on web pages using the Selenium WebDriver. It identifies and interacts with form fields, dropdowns, and other page elements to test the robustness of web applications. The tool includes JavaScript error detection and tracking features.
+The Selenium Fuzzer is a tool designed to perform automated testing on web pages using the Selenium WebDriver. It identifies and interacts with form fields, dropdowns, iframes, and other page elements to test the robustness of web applications. The tool includes JavaScript error detection, tracking features, and state comparison.
 
 ## Features
 
 - Fuzzing of input fields using pre-defined payloads.
 - Dropdown interaction and validation.
+- **Iframe Handling**: Detect and interact with iframes to fuzz input fields within nested frames.
+- **DOM Traversal**: Enhanced ability to traverse and interact with elements deeper in the hierarchy, including dynamically loaded or hidden elements made visible using JavaScript.
 - JavaScript error detection using both injected JavaScript and Chrome DevTools.
 - State tracking and snapshot comparison before and after interactions.
 
-## In action 
+## In Action 
+
+Version 0.0.4
 
 https://github.com/user-attachments/assets/51089107-1098-438c-bd3e-9472e2edb1ae
 
@@ -48,9 +52,6 @@ Run the fuzzer on a target URL:
 python main.py [URL] [OPTIONS]
 ```
 
-
-
-
 ### Arguments
 
 - `url`: The target URL to run the fuzzer against.
@@ -63,11 +64,12 @@ python main.py [URL] [OPTIONS]
 - `--check-dropdowns`: Check dropdown menus on the page.
 - `--devtools`: Enable Chrome DevTools Protocol to capture JavaScript and network activity.
 - `--track-state`: Track the state of the webpage before and after fuzzing.
+- `--check-iframes`: Detect and fuzz input fields within iframes on the page.
 
 ### Example
 
 ```bash
-python main.py --fuzz-fields --check-dropdowns --devtools http://localhost:8000/index.html
+python main.py --fuzz-fields --check-dropdowns --check-iframes --devtools http://localhost:8000/index.html
 ```
 
 ## Configuration
@@ -87,7 +89,7 @@ SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'False') == 'True'  # Run in 
 The fuzzer provides both file-based and console-based logging:
 
 - Logs are saved in the `log/` directory.
-- Console output provides an overview of current actions, JavaScript logs, and potential errors.
+- Console output provides an overview of current actions, JavaScript logs, DOM changes, and potential errors.
 
 ## Example Log Output
 
@@ -102,6 +104,11 @@ Starting ChromeDriver. GUI Mode: Enabled
 Found 1 suitable input elements on the page.
 Detected input fields:
 0: Unnamed (type: text)
+=== Switching to iframe 0 and detecting input fields ===
+Found 2 suitable input fields within iframe.
+Detected input fields in iframe:
+0: Username (type: text)
+1: Password (type: password)
 ```
 
 ## Contributing
