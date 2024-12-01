@@ -17,9 +17,9 @@
 - ~~**Stateful Fuzzing**: Implement state tracking by taking snapshots of the webpage's state and comparing them after fuzzing. This will help detect changes and unexpected behaviors, such as page redirects or content modifications.~~
 
 ## 5. Coverage Enhancement
-- [ ] **DOM Traversal**: Expand the project to traverse the DOM and interact with elements deeper in the hierarchy, including dynamically loaded elements or hidden elements that can be made visible using JavaScript.
+- ~~**DOM Traversal**: Expand the project to traverse the DOM and interact with elements deeper in the hierarchy, including dynamically loaded elements or hidden elements that can be made visible using JavaScript.~~
 - [ ] **File Upload Handling**: Add functionality to detect and fuzz file upload fields by providing different types of file payloads to test for file-based vulnerabilities.
-- [ ] **Iframe Handling**: Enhance the project to detect and interact with iframes, as they are often used by web applications and may contain additional input fields.
+- ~~**Iframe Handling**: Enhance the project to detect and interact with iframes, as they are often used by web applications and may contain additional input fields.~~
 
 ## 6. Machine Learning for Adaptive Fuzzing
 - [ ] **Adaptive Payload Selection**: Use machine learning to adjust payloads based on the responses received from the website. This would help in crafting more intelligent and targeted payloads based on observed behavior.
