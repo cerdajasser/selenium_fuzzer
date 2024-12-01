@@ -1,23 +1,22 @@
 
 # Selenium Fuzzer
 
-The Selenium Fuzzer is a tool designed to perform automated testing on web pages using the Selenium WebDriver. It identifies and interacts with form fields, dropdowns, iframes, and other page elements to test the robustness of web applications. The tool includes JavaScript error detection, tracking features, and state comparison.
+The Selenium Fuzzer is a tool designed to perform automated testing on web pages using Selenium WebDriver. It identifies and interacts with form fields, dropdowns, iframes, and other page elements to test the robustness of web applications. The tool includes JavaScript error detection, tracking features, and state comparison.
 
 ## Features
 
-- Fuzzing of input fields using pre-defined payloads.
-- Dropdown interaction and validation.
-- **Iframe Handling**: Detect and interact with iframes to fuzz input fields within nested frames.
-- **DOM Traversal**: Enhanced ability to traverse and interact with elements deeper in the hierarchy, including dynamically loaded or hidden elements made visible using JavaScript.
-- JavaScript error detection using both injected JavaScript and Chrome DevTools.
-- State tracking and snapshot comparison before and after interactions.
+- **Input Field Fuzzing**: Automatically detect and fuzz input fields using predefined payloads to identify vulnerabilities.
+- **Dropdown Interaction**: Detect dropdowns and interact with all available options to test their resilience.
+- **Iframe Handling**: Detect and interact with iframes to fuzz input fields within nested frames, extending coverage to iframe-based forms.
+- **DOM Traversal**: Comprehensive ability to traverse and interact with elements deeper in the DOM hierarchy, including dynamically loaded elements or hidden elements that are made visible via JavaScript.
+- **JavaScript Error Detection**: Capture JavaScript errors using both injected JavaScript and Chrome DevTools Protocol.
+- **State Tracking**: Capture snapshots before and after interactions to compare changes, detect anomalies, and track JavaScript-triggered changes on the page.
 
 ## In Action 
 
 Version 0.0.5
 
-https://github.com/user-attachments/assets/25382382-0a73-4013-9779-aa244507dd6c
-
+[Example Video/Screen of Fuzzer in Action](https://github.com/user-attachments/assets/25382382-0a73-4013-9779-aa244507dd6c)
 
 ## Requirements
 
@@ -65,20 +64,16 @@ python main.py [URL] [OPTIONS]
 - `--check-dropdowns`: Check dropdown menus on the page.
 - `--devtools`: Enable Chrome DevTools Protocol to capture JavaScript and network activity.
 - `--track-state`: Track the state of the webpage before and after fuzzing.
-- `--check-iframes`: Detect and fuzz input fields within iframes on the page.
 
 ### Example
 
 ```bash
-python main.py --fuzz-fields --check-dropdowns --check-iframes --devtools http://localhost:8000/index.html
+python main.py --fuzz-fields --check-dropdowns --devtools http://localhost:8000/index.html
 ```
 
 ## Configuration
 
 You can modify default settings through the `config.py` file:
-
-
-
 
 ```python
 # Path to ChromeDriver
@@ -93,33 +88,54 @@ SELENIUM_HEADLESS = os.getenv('SELENIUM_HEADLESS', 'False') == 'True'  # Run in 
 The fuzzer provides both file-based and console-based logging:
 
 - Logs are saved in the `log/` directory.
-- Console output provides an overview of current actions, JavaScript logs, DOM changes, and potential errors.
+- Console output provides an overview of current actions, JavaScript logs, DOM changes, iframe switches, and potential errors.
 
 ## Example Log Output
 
 When running the fuzzer, you'll see outputs like this:
 
 ```plaintext
-Starting ChromeDriver. GUI Mode: Enabled
-[2024-11-30 14:31:07,417] ℹ️ JavaScript for logging successfully injected.
-=== Starting the Selenium Fuzzer ===
->>> Accessing URL: http://localhost:8000/inputtypes.com/index.html
-=== Fuzzing Input Fields on the Page ===
-Found 1 suitable input elements on the page.
-Detected input fields:
-0: Unnamed (type: text)
-=== Switching to iframe 0 and detecting input fields ===
-Found 2 suitable input fields within iframe.
-Detected input fields in iframe:
-0: Username (type: text)
-1: Password (type: password)
-```
+
+
 
 ## Contributing
 
 Contributions are welcome! Please submit a pull request or open an issue for any feature requests, bug reports, or improvements.
 
-## License
+## License━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 Starting Selenium Fuzzer...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🖥️  Starting ChromeDriver
+   - Mode: GUI
+Starting ChromeDriver. GUI Mode: Enabled
+[2024-12-01 16:29:10,922] INFO: 🛠️ DevTools successfully initialized for JavaScript and network monitoring.
+[2024-12-01 16:29:10,944] INFO: ℹ️ JavaScript for logging successfully injected.
+[2024-12-01 16:29:10,953] INFO: ℹ️ JavaScript for DOM mutation monitoring successfully injected.
+🛠️  DevTools successfully initialized for JavaScript and network monitoring.
+ℹ️  JavaScript for console logging injected successfully.
+🔍 JavaScript for DOM mutation monitoring injected successfully.
+
+🌐 Accessing URL: http://localhost:8000/inputtypes.com/index.html...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ Initializing Fuzzer...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Detecting input fields on the page:
+   - Including hidden elements, dynamically loaded elements, and elements inside iframes...
+
+[2024-12-01 16:29:13,987] INFO: Found 1 suitable input elements on the page.
+✅  Found 1 suitable input element(s):
+   ────────────────────────────────────────────────
+   [0] 📄 Name: Unnamed
+      🏷️ Type: text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please enter the indices of the fields to fuzz (comma-separated): 0
+
+```
+
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
 
