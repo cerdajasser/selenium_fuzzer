@@ -5,6 +5,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException, NoSuchFrameException
 import random
 import string
 from typing import List
@@ -23,6 +24,14 @@ def reveal_element_with_js(driver, element: WebElement) -> None:
         logger.info(f"Element with tag name '{element.tag_name}' revealed.")
     except Exception as e:
         logger.error(f"Error revealing element: {e}")
+
+def switch_to_iframe(driver, iframe_element: WebElement) -> None:
+    """Switch to a given iframe."""
+    try:
+        driver.switch_to.frame(iframe_element)
+        logger.info(f"Switched to iframe: {iframe_element.get_attribute('name') or 'Unnamed'}")
+    except NoSuchFrameException as e:
+        logger.error(f"Could not switch to iframe: {e}")
 
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""

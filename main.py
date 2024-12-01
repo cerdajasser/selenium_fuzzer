@@ -40,7 +40,7 @@ def main():
     parser.add_argument("url", help="The URL to run the fuzzer against.")
     parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
-    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
+    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page, including fields within iframes.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
@@ -72,7 +72,7 @@ def main():
 
         # Fuzz input fields if requested
         if args.fuzz_fields:
-            print("Detecting input fields on the page, including hidden and dynamically loaded elements...\n")
+            print("Detecting input fields on the page, including hidden, dynamically loaded elements, and those in iframes...\n")
             logger.info("\n=== Detecting Input Fields on the Page ===\n")
             try:
                 input_fields = fuzzer.detect_inputs()
@@ -101,7 +101,7 @@ def main():
 
         # Check dropdown menus if requested
         if args.check_dropdowns:
-            print("Checking dropdown menus on the page...\n")
+            print("Checking dropdown menus on the page, including those inside iframes...\n")
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
                 fuzzer.fuzz_dropdowns(delay=args.delay)

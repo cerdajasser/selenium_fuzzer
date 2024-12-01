@@ -1,7 +1,7 @@
 import logging
 import time
 import os
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, NoSuchFrameException
 from selenium_fuzzer.config import Config
 import sys
 
@@ -206,7 +206,7 @@ class JavaScriptChangeDetector:
 
     def check_for_js_changes(self, success_message=None, error_keywords=None, delay=2):
         """
-        Check for JavaScript changes or error messages on the page.
+        Check for JavaScript changes or error messages on the page, including those in iframes.
 
         Args:
             success_message (str): The expected success message after changes are applied.
@@ -218,8 +218,37 @@ class JavaScriptChangeDetector:
 
         time.sleep(delay)
         try:
+            # Capture changes in the main page
             page_source = self.driver.page_source.lower()
+            self._compare_page_source(page_source, success_message, error_keywords)
 
+            # Capture changes in iframes
+            iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
+            for idx, iframe in enumerate(iframes):
+                try:
+                    self.driver.switch_to.frame(iframe)
+                    self.logger.info(f"Checking JavaScript changes in iframe {idx + 1}")
+                    iframe_page_source = self.driver.page_source.lower()
+                    self._compare_page_source(iframe_page_source, success_message, error_keywords)
+                except NoSuchFrameException as e:
+                    self.logger.error(f"Error accessing iframe {idx + 1}: {e}")
+                finally:
+                    self.driver.switch_to.default_content()
+
+        except WebDriverException as e:
+            self.logger.error(f"Error checking for JavaScript changes: {e}")
+            self.console_logger.error(f"Error checking for JavaScript changes: {e}")
+
+    def _compare_page_source(self, page_source, success_message, error_keywords):
+        """
+        Compare the current page source with the previous state to detect changes.
+
+        Args:
+            page_source (str): The current state of the page source.
+            success_message (str): Expected success message in the page source.
+            error_keywords (list of str): List of error keywords to check.
+        """
+        try:
             if hasattr(self, 'previous_page_source') and self.previous_page_source != page_source:
                 self.logger.info("Detected changes in the page source.")
                 self.console_logger.info("✅ [Detected Changes]: The page source has changed. Please review the latest content.")
@@ -237,8 +266,6 @@ class JavaScriptChangeDetector:
                 if keyword in page_source:
                     self.logger.warning(f"Error detected: keyword '{keyword}' found.")
                     self.console_logger.warning(f"🚨 [Error Detected]: Keyword '{keyword}' found. Investigate further.")
-
         except WebDriverException as e:
-            self.logger.error(f"Error checking for JavaScript changes: {e}")
-            self.console_logger.error(f"Error checking for JavaScript changes: {e}")
-
+            self.logger.error(f"Error comparing page sources: {e}")
+            self.console_logger.error(f"Error comparing page sources: {e}")

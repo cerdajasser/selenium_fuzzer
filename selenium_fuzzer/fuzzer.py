@@ -10,6 +10,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from urllib.parse import urlparse
 from selenium.webdriver.remote.webelement import WebElement
 from selenium_fuzzer.config import Config
+from selenium_fuzzer.utils import switch_to_iframe
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url, track_state=True):
@@ -72,11 +73,21 @@ class Fuzzer:
 
     def detect_inputs(self):
         """
-        Detect all input fields on the page, including those deeper in the DOM.
+        Detect all input fields on the page, including those deeper in the DOM and within iframes.
         """
+        input_fields = []
         try:
-            input_fields = []
+            # Traverse the main page
             self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields)
+
+            # Traverse each iframe
+            iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
+            for idx, iframe in enumerate(iframes):
+                self.logger.info(f"Switching to iframe {idx + 1}")
+                self.console_logger.info(f"🔄 Switching to iframe {idx + 1}")
+                switch_to_iframe(self.driver, iframe)
+                self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields)
+                self.driver.switch_to.default_content()
 
             suitable_fields = [field for field in input_fields if field.is_displayed() and field.is_enabled() and field.get_attribute("type") in ["text", "password", "email", "url", "number"]]
             self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
@@ -91,7 +102,7 @@ class Fuzzer:
     def deep_traverse(self, root_element, elements):
         """
         Recursively traverse the DOM to detect all relevant elements.
-        
+
         Args:
             root_element (WebElement): The root element to start the traversal.
             elements (list): The list to store found elements.
