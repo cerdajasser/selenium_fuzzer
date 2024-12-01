@@ -6,7 +6,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.0.5] - 2024-12-02
+
+### Added
+- **Iframe Handling**: Enhanced the fuzzer to detect and interact with input fields within iframes. This includes switching between iframes and collecting input elements for fuzzing, expanding coverage to web applications that utilize iframes for form inputs.
+- **Extended DOM Traversal**: Implemented deeper DOM traversal logic to detect and interact with dynamically loaded elements, hidden elements, and elements nested within complex page structures.
+- **DOM Mutation Monitoring**: Injected JavaScript using `MutationObserver` to track changes in the DOM during fuzzing, providing better insight into dynamic content changes.
+- **Improved User Console Output**: Console output during execution has been polished to provide a more readable, user-friendly summary of actions being taken by the fuzzer.
+
 
 ### Added
 - `JavaScriptChangeDetector` now includes robust JavaScript error detection using both injected JavaScript and Chrome DevTools.
