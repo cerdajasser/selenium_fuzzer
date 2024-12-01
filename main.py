@@ -40,7 +40,7 @@ def main():
     parser.add_argument("url", help="The URL to run the fuzzer against.")
     parser.add_argument("--headless", action="store_true", help="Run Chrome in headless mode.")
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
-    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page, including fields within iframes.")
+    parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
     parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
@@ -54,25 +54,43 @@ def main():
     try:
         # Determine headless mode based on arguments or configuration
         headless = args.headless or Config.SELENIUM_HEADLESS
-        print("Starting the Selenium Fuzzer...\n")
+        
+        # Structured output: Starting the Selenium Fuzzer
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🚀 Starting Selenium Fuzzer...")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("\n=== Starting the Selenium Fuzzer ===\n")
 
+        # Start ChromeDriver
+        print("\n🖥️  Starting ChromeDriver")
+        print(f"   - Mode: {'Headless' if headless else 'GUI'}")
+        
         driver = create_driver(headless=headless)
 
         # Initialize JavaScriptChangeDetector with DevTools option
         js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
 
-        print(f"Accessing URL: {args.url}...\n")
+        # Indicate successful initialization
+        print("🛠️  DevTools successfully initialized for JavaScript and network monitoring.")
+        print("ℹ️  JavaScript for console logging injected successfully.")
+        print("🔍 JavaScript for DOM mutation monitoring injected successfully.\n")
+
+        # Access the target URL
+        print(f"🌐 Accessing URL: {args.url}...\n")
         logger.info(f"\n>>> Accessing the target URL: {args.url}\n")
         driver.get(args.url)
 
-        # Instantiate the Fuzzer with the provided URL and state tracking option
-        print("Initializing the Fuzzer...\n")
+        # Initialize Fuzzer
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("✨ Initializing Fuzzer...")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
         fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
 
         # Fuzz input fields if requested
         if args.fuzz_fields:
-            print("Detecting input fields on the page, including hidden, dynamically loaded elements, and those in iframes...\n")
+            print("\n📋 Detecting input fields on the page:")
+            print("   - Including hidden elements, dynamically loaded elements, and elements inside iframes...\n")
             logger.info("\n=== Detecting Input Fields on the Page ===\n")
             try:
                 input_fields = fuzzer.detect_inputs()
@@ -80,13 +98,17 @@ def main():
                     logger.warning("\n!!! No input fields detected on the page.\n")
                     return
 
-                print(f"Detected {len(input_fields)} input field(s):")
+                print(f"✅  Found {len(input_fields)} suitable input element(s):")
+                print("   ────────────────────────────────────────────────")
                 for idx, field in enumerate(input_fields):
                     field_type = field.get_attribute("type") or "unknown"
                     field_name = field.get_attribute("name") or "Unnamed"
-                    print(f"  [{idx}] - Name: {field_name}, Type: {field_type}")
+                    print(f"   [{idx}] 📄 Name: {field_name}")
+                    print(f"      🏷️ Type: {field_type}")
 
-                selected_indices = input("Enter the indices of the fields to fuzz (comma-separated): ")
+                # Ask for indices to fuzz
+                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                selected_indices = input("\nPlease enter the indices of the fields to fuzz (comma-separated): ")
                 selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
 
                 payloads = generate_safe_payloads()
@@ -101,7 +123,7 @@ def main():
 
         # Check dropdown menus if requested
         if args.check_dropdowns:
-            print("Checking dropdown menus on the page, including those inside iframes...\n")
+            print("\n📋 Checking dropdown menus on the page...")
             logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
             try:
                 fuzzer.fuzz_dropdowns(delay=args.delay)
@@ -117,7 +139,7 @@ def main():
     finally:
         if driver:
             driver.quit()
-            print("Closed the browser and exited gracefully.\n")
+            print("\nClosed the browser and exited gracefully.")
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
 if __name__ == "__main__":
