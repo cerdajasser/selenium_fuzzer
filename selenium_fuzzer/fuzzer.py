@@ -30,7 +30,6 @@ class Fuzzer:
         """
         parsed_url = urlparse(self.url)
         domain = parsed_url.netloc.replace(":", "_").replace(".", "_")
-        # Use the log folder from Config and ensure it's consistent
         log_filename = os.path.join(Config.LOG_FOLDER, f"fuzzing_log_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
 
         logger = logging.getLogger(f"fuzzer_{domain}")
@@ -44,7 +43,7 @@ class Fuzzer:
         formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
 
-        # Add handlers to the logger
+        # Add handlers to the logger if not already added
         if not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers):
             logger.addHandler(file_handler)
 
