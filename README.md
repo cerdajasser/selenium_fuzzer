@@ -14,9 +14,10 @@ The Selenium Fuzzer is a tool designed to perform automated testing on web pages
 
 ## In Action 
 
-Version 0.0.4
+Version 0.0.5
 
-https://github.com/user-attachments/assets/51089107-1098-438c-bd3e-9472e2edb1ae
+https://github.com/user-attachments/assets/25382382-0a73-4013-9779-aa244507dd6c
+
 
 ## Requirements
 
@@ -75,6 +76,9 @@ python main.py --fuzz-fields --check-dropdowns --check-iframes --devtools http:/
 ## Configuration
 
 You can modify default settings through the `config.py` file:
+
+
+
 
 ```python
 # Path to ChromeDriver
