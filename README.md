@@ -44,6 +44,11 @@ Run the fuzzer on a target URL:
 python main.py [URL] [OPTIONS]
 ```
 
+
+## In action 
+
+https://github.com/user-attachments/assets/51089107-1098-438c-bd3e-9472e2edb1ae
+
 ### Arguments
 
 - `url`: The target URL to run the fuzzer against.
