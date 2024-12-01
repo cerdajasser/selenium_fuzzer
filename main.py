@@ -21,7 +21,8 @@ def main():
     args = parser.parse_args()
 
     # Set up logging
-    logger = setup_logger(args.url, log_level=getattr(logging, Config.LOG_LEVEL.upper(), logging.DEBUG))
+    log_file_path = Config.get_log_file_path()
+    logger = setup_logger(args.url, log_file_path, log_level=getattr(logging, Config.LOG_LEVEL.upper(), logging.DEBUG))
 
     # Create the WebDriver using `create_driver` with logging enabled
     driver = None

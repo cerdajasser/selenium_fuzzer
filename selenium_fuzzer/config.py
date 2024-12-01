@@ -19,7 +19,8 @@ class Config:
         os.makedirs(LOG_FOLDER)
 
     # Dynamic log file name in the specified log folder
-    LOG_FILE = os.path.join(LOG_FOLDER, f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log")
+    LOG_FILE_NAME = f"selenium_fuzzer_{time.strftime('%Y%m%d_%H%M%S')}.log"
+    LOG_FILE = os.path.join(LOG_FOLDER, LOG_FILE_NAME)
 
     # DevTools Configuration
     ENABLE_DEVTOOLS = os.getenv('ENABLE_DEVTOOLS', 'False') == 'True'  # Enable Chrome DevTools Protocol for monitoring

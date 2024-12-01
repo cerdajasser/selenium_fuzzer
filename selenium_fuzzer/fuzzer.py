@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import difflib
 from selenium.webdriver.support.ui import Select, WebDriverWait
@@ -8,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException
 from urllib.parse import urlparse
 from selenium.webdriver.remote.webelement import WebElement
+from selenium_fuzzer.config import Config
 
 class Fuzzer:
     def __init__(self, driver, js_change_detector, url, track_state=True):
@@ -28,7 +30,8 @@ class Fuzzer:
         """
         parsed_url = urlparse(self.url)
         domain = parsed_url.netloc.replace(":", "_").replace(".", "_")
-        log_filename = f"fuzzing_log_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log"
+        # Use the log folder from Config and ensure it's consistent
+        log_filename = os.path.join(Config.LOG_FOLDER, f"fuzzing_log_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
 
         logger = logging.getLogger(f"fuzzer_{domain}")
         logger.setLevel(logging.DEBUG)
