@@ -81,8 +81,9 @@ class Fuzzer:
             self.console_logger.info(f"Found {len(suitable_fields)} suitable input elements on the page.")
             return suitable_fields
         except Exception as e:
-            self.logger.error(f"Error detecting input fields: {e}")
-            self.console_logger.error(f"Error detecting input fields: {e}")
+            error_message = str(e) if str(e) else "Unknown error occurred while detecting input fields."
+            self.logger.error(f"Error detecting input fields: {error_message}")
+            self.console_logger.error(f"Error detecting input fields: {error_message}")
             return []
 
     def fuzz_field(self, input_element, payloads, delay=1):
@@ -131,11 +132,15 @@ class Fuzzer:
                 self.js_change_detector.capture_js_console_logs()
 
             except (NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException) as e:
-                self.logger.error(f"Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
-                self.console_logger.error(f"❌ Error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                # Handle empty or malformed error messages
+                error_message = str(e) if str(e) else "Unknown error occurred. The error message was empty. This often occurs with input that the page is unable to process."
+                self.logger.error(f"Error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.console_logger.error(f"❌ Error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
             except Exception as e:
-                self.logger.error(f"Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
-                self.console_logger.error(f"❌ Unexpected error inserting payload into field '{input_element.get_attribute('name') or 'Unnamed'}': {e}")
+                # General unexpected error
+                error_message = str(e) if str(e) else "Unexpected error occurred, but no details were available."
+                self.logger.error(f"Unexpected error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.console_logger.error(f"❌ Unexpected error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
 
         after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
         if self.track_state:
@@ -165,8 +170,9 @@ class Fuzzer:
                 self.fuzz_dropdown(dropdown_element, delay)
 
         except Exception as e:
-            self.logger.error(f"Error detecting dropdowns: {e}")
-            self.console_logger.error(f"❌ Error detecting dropdowns: {e}")
+            error_message = str(e) if str(e) else "Unknown error occurred while detecting dropdowns."
+            self.logger.error(f"Error detecting dropdowns: {error_message}")
+            self.console_logger.error(f"❌ Error detecting dropdowns: {error_message}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
@@ -191,8 +197,9 @@ class Fuzzer:
                 self.js_change_detector.capture_js_console_logs()
 
         except (StaleElementReferenceException, NoSuchElementException, WebDriverException, TimeoutException) as e:
-            self.logger.error(f"Error fuzzing dropdown: {e}")
-            self.console_logger.error(f"❌ Error fuzzing dropdown: {e}")
+            error_message = str(e) if str(e) else "Unknown error occurred while interacting with the dropdown."
+            self.logger.error(f"Error fuzzing dropdown: {error_message}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown: {error_message}")
 
         after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
         if self.track_state:
@@ -221,7 +228,8 @@ class Fuzzer:
                             element_id = element.get_attribute("id") or element.get_attribute("name")
                             element_snapshots[element_id] = element.get_attribute("outerHTML")
                         except Exception as e:
-                            self.logger.error(f"Error taking element snapshot: {e}")
+                            error_message = str(e) if str(e) else "Unknown error occurred while taking element snapshot."
+                            self.logger.error(f"Error taking element snapshot for element '{element_id}': {error_message}")
 
             snapshot = {
                 'page_source': page_source,
@@ -234,7 +242,8 @@ class Fuzzer:
             self.console_logger.info("Snapshot taken of the current page state.")
             return snapshot
         except Exception as e:
-            self.logger.error(f"Error taking snapshot of the page state: {e}")
+            error_message = str(e) if str(e) else "Unknown error occurred while taking snapshot of the page state."
+            self.logger.error(f"Error taking snapshot of the page state: {error_message}")
             return None
 
     def compare_snapshots(self, before_snapshot, after_snapshot):
