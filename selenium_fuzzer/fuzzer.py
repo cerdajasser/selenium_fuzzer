@@ -72,10 +72,12 @@ class Fuzzer:
 
     def detect_inputs(self):
         """
-        Detect all input fields on the page.
+        Detect all input fields on the page, including those deeper in the DOM.
         """
         try:
-            input_fields = self.driver.find_elements(By.TAG_NAME, "input")
+            input_fields = []
+            self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields)
+
             suitable_fields = [field for field in input_fields if field.is_displayed() and field.is_enabled() and field.get_attribute("type") in ["text", "password", "email", "url", "number"]]
             self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
             self.console_logger.info(f"Found {len(suitable_fields)} suitable input elements on the page.")
@@ -85,6 +87,30 @@ class Fuzzer:
             self.logger.error(f"Error detecting input fields: {error_message}")
             self.console_logger.error(f"Error detecting input fields: {error_message}")
             return []
+
+    def deep_traverse(self, root_element, elements):
+        """
+        Recursively traverse the DOM to detect all relevant elements.
+        
+        Args:
+            root_element (WebElement): The root element to start the traversal.
+            elements (list): The list to store found elements.
+        """
+        try:
+            if root_element.tag_name in ["input", "button", "select", "textarea"]:
+                elements.append(root_element)
+
+            child_elements = root_element.find_elements(By.XPATH, "./*")
+            for child in child_elements:
+                self.deep_traverse(child, elements)
+        except StaleElementReferenceException as e:
+            self.logger.warning(f"StaleElementReferenceException while traversing DOM: {e}")
+
+    def make_element_visible(self, element):
+        """
+        Use JavaScript to make a hidden element visible.
+        """
+        self.driver.execute_script("arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible';", element)
 
     def fuzz_field(self, input_element, payloads, delay=1):
         """
@@ -97,6 +123,11 @@ class Fuzzer:
         """
         MAX_RETRIES = 3
         before_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
+
+        # Make sure the element is visible
+        if not input_element.is_displayed():
+            self.logger.info(f"Making hidden input element '{input_element.get_attribute('name') or 'Unnamed'}' visible for fuzzing.")
+            self.make_element_visible(input_element)
 
         for payload in payloads:
             try:

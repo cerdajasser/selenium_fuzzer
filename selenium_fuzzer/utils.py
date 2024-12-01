@@ -12,11 +12,17 @@ import time
 
 logger = logging.getLogger(__name__)
 
-
 def scroll_into_view(driver, element: WebElement) -> None:
     """Scroll the element into view."""
     driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", element)
 
+def reveal_element_with_js(driver, element: WebElement) -> None:
+    """Reveal a hidden element using JavaScript."""
+    try:
+        driver.execute_script("arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible';", element)
+        logger.info(f"Element with tag name '{element.tag_name}' revealed.")
+    except Exception as e:
+        logger.error(f"Error revealing element: {e}")
 
 def generate_safe_payloads() -> List[str]:
     """Generate a list of safe payloads for fuzzing."""
@@ -160,7 +166,6 @@ def generate_safe_payloads() -> List[str]:
 
     return payloads
 
-
 def retry_on_stale_element(func):
     """Decorator to retry a function if a StaleElementReferenceException is encountered."""
     def wrapper(*args, **kwargs):
@@ -176,7 +181,6 @@ def retry_on_stale_element(func):
                     logger.error(f"Max retries reached. StaleElementReferenceException could not be resolved: {e}")
                     raise
     return wrapper
-
 
 def is_element_displayed(element: WebElement, driver) -> bool:
     """Check if an element is displayed, with retry logic for stale elements."""

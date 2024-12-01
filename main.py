@@ -72,7 +72,7 @@ def main():
 
         # Fuzz input fields if requested
         if args.fuzz_fields:
-            print("Detecting input fields on the page...\n")
+            print("Detecting input fields on the page, including hidden and dynamically loaded elements...\n")
             logger.info("\n=== Detecting Input Fields on the Page ===\n")
             try:
                 input_fields = fuzzer.detect_inputs()

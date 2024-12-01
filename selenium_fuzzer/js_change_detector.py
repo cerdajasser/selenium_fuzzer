@@ -20,8 +20,9 @@ class JavaScriptChangeDetector:
             self.devtools = driver.execute_cdp_cmd
             self._initialize_devtools()
 
-        # Inject JavaScript to capture console logs
+        # Inject JavaScript to capture console logs and monitor DOM mutations
         self._initialize_js_logging()
+        self._inject_dom_monitoring_script()
 
     def setup_logger(self):
         """
@@ -111,6 +112,37 @@ class JavaScriptChangeDetector:
         except WebDriverException as e:
             self.logger.error(f"Error injecting JavaScript for logging: {e}")
             self.console_logger.error(f"Error injecting JavaScript for logging: {e}")
+
+    def _inject_dom_monitoring_script(self):
+        """
+        Inject JavaScript to monitor DOM mutations using MutationObserver.
+        """
+        try:
+            script = """
+                (function() {
+                    if (window.mutationObserverInitialized) {
+                        return;
+                    }
+                    window.mutationObserverInitialized = true;
+                    var observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            window.loggedMessages.push({level: "INFO", message: "DOM mutation detected: " + mutation.type});
+                        });
+                    });
+
+                    observer.observe(document, {
+                        attributes: true,
+                        childList: true,
+                        subtree: true
+                    });
+                })();
+            """
+            self.driver.execute_script(script)
+            self.logger.info("JavaScript for DOM mutation monitoring successfully injected.")
+            self.console_logger.info("ℹ️ JavaScript for DOM mutation monitoring successfully injected.")
+        except WebDriverException as e:
+            self.logger.error(f"Error injecting JavaScript for DOM monitoring: {e}")
+            self.console_logger.error(f"Error injecting JavaScript for DOM monitoring: {e}")
 
     def capture_js_console_logs(self):
         """Capture and analyze JavaScript console logs for errors or anomalies"""
@@ -209,3 +241,4 @@ class JavaScriptChangeDetector:
         except WebDriverException as e:
             self.logger.error(f"Error checking for JavaScript changes: {e}")
             self.console_logger.error(f"Error checking for JavaScript changes: {e}")
+
