@@ -103,6 +103,9 @@ class Fuzzer:
                 retry_count = 0
                 success = False
 
+                # Log payload type (e.g., whitespace, empty, etc.) for better context
+                payload_description = "empty" if payload == "" else "whitespace" if payload.isspace() else payload
+
                 while retry_count < MAX_RETRIES and not success:
                     # Clear the input field using JavaScript to ensure it's empty
                     self.driver.execute_script("arguments[0].value = '';", input_element)
@@ -122,11 +125,11 @@ class Fuzzer:
                         retry_count += 1
 
                 if success:
-                    self.logger.info(f"Payload '{payload}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
-                    self.console_logger.info(f"✅ Successfully entered payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
+                    self.logger.info(f"Payload '{payload_description}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
+                    self.console_logger.info(f"✅ Successfully entered payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
                 else:
-                    self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
-                    self.console_logger.warning(f"⚠️ Failed to verify payload '{payload}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
+                    self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload_description}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
+                    self.console_logger.warning(f"⚠️ Failed to verify payload '{payload_description}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
 
                 # Check for JavaScript changes after input
                 self.js_change_detector.capture_js_console_logs()
@@ -134,13 +137,13 @@ class Fuzzer:
             except (NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException) as e:
                 # Handle empty or malformed error messages
                 error_message = str(e) if str(e) else "Unknown error occurred. The error message was empty. This often occurs with input that the page is unable to process."
-                self.logger.error(f"Error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
-                self.console_logger.error(f"❌ Error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.logger.error(f"Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.console_logger.error(f"❌ Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
             except Exception as e:
                 # General unexpected error
                 error_message = str(e) if str(e) else "Unexpected error occurred, but no details were available."
-                self.logger.error(f"Unexpected error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
-                self.console_logger.error(f"❌ Unexpected error inserting payload '{payload}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.logger.error(f"Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.console_logger.error(f"❌ Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
 
         after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
         if self.track_state:
