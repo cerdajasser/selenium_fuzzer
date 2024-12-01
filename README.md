@@ -98,9 +98,6 @@ When running the fuzzer, you'll see outputs like this:
 
 
 
-## Contributing
-
-Contributions are welcome! Please submit a pull request or open an issue for any feature requests, bug reports, or improvements.
 
 ## License━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 Starting Selenium Fuzzer...
@@ -135,6 +132,9 @@ Starting ChromeDriver. GUI Mode: Enabled
 Please enter the indices of the fields to fuzz (comma-separated): 0
 
 ```
+## Contributing
+
+Contributions are welcome! Please submit a pull request or open an issue for any feature requests, bug reports, or improvements.
 
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
