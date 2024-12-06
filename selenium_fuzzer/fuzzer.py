@@ -74,11 +74,12 @@ class Fuzzer:
     def detect_inputs(self):
         """
         Detect all input fields on the page, including those deeper in the DOM and within iframes.
+        Returns a list of tuples (iframe_index, element).
         """
         input_fields = []
         try:
-            # Traverse the main page
-            self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields)
+            # Traverse the main page (iframe_index = None for main page)
+            self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields, iframe_index=None)
 
             # Traverse each iframe
             iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
@@ -86,34 +87,35 @@ class Fuzzer:
                 self.logger.info(f"Switching to iframe {idx + 1}")
                 self.console_logger.info(f"🔄 Switching to iframe {idx + 1}")
                 switch_to_iframe(self.driver, iframe)
-                self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields)
+                self.deep_traverse(self.driver.find_element(By.TAG_NAME, "body"), input_fields, iframe_index=idx + 1)
                 self.driver.switch_to.default_content()
 
-            suitable_fields = [field for field in input_fields if field.is_displayed() and field.is_enabled() and field.get_attribute("type") in ["text", "password", "email", "url", "number"]]
+            suitable_fields = [
+                (f['iframe'], f['element']) for f in input_fields
+                if f['element'].is_displayed() and f['element'].is_enabled() and
+                   f['element'].get_attribute("type") in ["text", "password", "email", "url", "number"]
+            ]
             self.logger.info(f"Found {len(suitable_fields)} suitable input elements.")
             self.console_logger.info(f"Found {len(suitable_fields)} suitable input elements on the page.")
             return suitable_fields
         except Exception as e:
             error_message = str(e) if str(e) else "Unknown error occurred while detecting input fields."
-            self.logger.error(f"Error detecting input fields: {error_message}")
+            self.logger.error(f"Error detecting input fields: {error_message}. Current URL: {self.driver.current_url}")
             self.console_logger.error(f"Error detecting input fields: {error_message}")
             return []
 
-    def deep_traverse(self, root_element, elements):
+    def deep_traverse(self, root_element, elements, iframe_index):
         """
         Recursively traverse the DOM to detect all relevant elements.
-
-        Args:
-            root_element (WebElement): The root element to start the traversal.
-            elements (list): The list to store found elements.
+        Stores {'iframe': iframe_index, 'element': element} for each found element.
         """
         try:
             if root_element.tag_name in ["input", "button", "select", "textarea"]:
-                elements.append(root_element)
+                elements.append({'iframe': iframe_index, 'element': root_element})
 
             child_elements = root_element.find_elements(By.XPATH, "./*")
             for child in child_elements:
-                self.deep_traverse(child, elements)
+                self.deep_traverse(child, elements, iframe_index)
         except StaleElementReferenceException as e:
             self.logger.warning(f"StaleElementReferenceException while traversing DOM: {e}")
 
@@ -123,43 +125,43 @@ class Fuzzer:
         """
         self.driver.execute_script("arguments[0].style.display = 'block'; arguments[0].style.visibility = 'visible';", element)
 
-    def fuzz_field(self, input_element, payloads, delay=1):
+    def fuzz_field(self, input_data, payloads, delay=1):
         """
         Fuzz a given input field with a list of payloads.
-
-        Args:
-            input_element (WebElement): The input field to fuzz.
-            payloads (list): The payloads to input into the field.
-            delay (int): Time in seconds to wait between fuzzing attempts.
+        input_data: (iframe_index, input_element)
         """
-        MAX_RETRIES = 3
+        iframe_index, input_element = input_data
+        field_name = input_element.get_attribute('name') or 'Unnamed'
+        current_url = self.driver.current_url
+        self.logger.info(f"Fuzzing field '{field_name}' in iframe {iframe_index if iframe_index else 'main page'} at URL: {current_url}")
+        self.console_logger.info(f"🔍 Fuzzing field '{field_name}' (iframe: {iframe_index if iframe_index else 'none'})")
+
         before_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
 
         # Make sure the element is visible
         if not input_element.is_displayed():
-            self.logger.info(f"Making hidden input element '{input_element.get_attribute('name') or 'Unnamed'}' visible for fuzzing.")
+            self.logger.info(f"Making hidden input element '{field_name}' visible for fuzzing at URL: {current_url}")
             self.make_element_visible(input_element)
+
+        MAX_RETRIES = 3
 
         for payload in payloads:
             try:
                 retry_count = 0
                 success = False
-
-                # Log payload type (e.g., whitespace, empty, etc.) for better context
                 payload_description = "empty" if payload == "" else "whitespace" if payload.isspace() else payload
 
                 while retry_count < MAX_RETRIES and not success:
-                    # Clear the input field using JavaScript to ensure it's empty
+                    # Clear the input field
                     self.driver.execute_script("arguments[0].value = '';", input_element)
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == "")
 
-                    # Set value using JavaScript to avoid front-end interference
+                    # Set value using JavaScript
                     self.driver.execute_script("arguments[0].value = arguments[1];", input_element, payload)
                     input_element.send_keys(Keys.TAB)
                     input_element.send_keys(Keys.ENTER)
                     WebDriverWait(self.driver, delay).until(lambda d: self.driver.execute_script("return arguments[0].value;", input_element) == payload)
 
-                    # Verify the value
                     entered_value = self.driver.execute_script("return arguments[0].value;", input_element)
                     success = (entered_value == payload)
 
@@ -167,24 +169,23 @@ class Fuzzer:
                         retry_count += 1
 
                 if success:
-                    self.logger.info(f"Payload '{payload_description}' successfully entered into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
-                    self.console_logger.info(f"✅ Successfully entered payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}'.")
+                    self.logger.info(f"Payload '{payload_description}' successfully entered into field '{field_name}' in iframe {iframe_index if iframe_index else 'main page'}. URL: {current_url}")
+                    self.console_logger.info(f"✅ Successfully entered payload '{payload_description}' into field '{field_name}'.")
                 else:
-                    self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload_description}' in field '{input_element.get_attribute('name') or 'Unnamed'}'. Entered Value: '{entered_value}'")
-                    self.console_logger.warning(f"⚠️ Failed to verify payload '{payload_description}' in field '{input_element.get_attribute('name') or 'Unnamed'}' after {MAX_RETRIES} retries.")
+                    self.logger.warning(f"Payload Verification Failed after {MAX_RETRIES} retries: '{payload_description}' in field '{field_name}', iframe {iframe_index if iframe_index else 'main page'} at URL: {current_url}. Entered Value: '{entered_value}'")
+                    self.console_logger.warning(f"⚠️ Failed to verify payload '{payload_description}' in field '{field_name}' after {MAX_RETRIES} retries.")
 
                 # Check for JavaScript changes after input
                 self.js_change_detector.capture_js_console_logs()
 
             except (NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException) as e:
                 error_message = str(e) if str(e) else "Unknown error occurred."
-                self.logger.error(f"Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
-                self.console_logger.error(f"❌ Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.logger.error(f"Error inserting payload '{payload_description}' into field '{field_name}' in iframe {iframe_index if iframe_index else 'main page'} at URL: {current_url}: {error_message}")
+                self.console_logger.error(f"❌ Error inserting payload '{payload_description}' into field '{field_name}': {error_message}")
             except Exception as e:
-                # General unexpected error
                 error_message = str(e) if str(e) else "Unexpected error occurred."
-                self.logger.error(f"Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
-                self.console_logger.error(f"❌ Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
+                self.logger.error(f"Unexpected error inserting payload '{payload_description}' into field '{field_name}' in iframe {iframe_index if iframe_index else 'main page'} at URL: {current_url}: {error_message}")
+                self.console_logger.error(f"❌ Unexpected error inserting payload '{payload_description}' into field '{field_name}': {error_message}")
 
         after_snapshot = self.take_snapshot(elements_to_track=[input_element]) if self.track_state else None
         if self.track_state:
@@ -192,19 +193,18 @@ class Fuzzer:
 
     def fuzz_dropdowns(self, selector="select", delay=1):
         """
-        Detect dropdown elements using the provided selector and interact with only the user-selected ones.
+        Detect dropdown elements and allow user to select which ones to fuzz.
         """
         try:
             dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
+            self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}' at URL: {self.driver.current_url}")
             self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.\n")
 
             if not dropdown_elements:
-                self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
+                self.logger.warning(f"No dropdown elements found using selector '{selector}' at URL: {self.driver.current_url}")
                 self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
                 return
 
-            # Print dropdowns in a user-friendly format, similar to how we handle input fields
             print(f"✅ Found {len(dropdown_elements)} dropdown element(s):")
             print("   ────────────────────────────────────────────────")
             for idx, dropdown_element in enumerate(dropdown_elements):
@@ -221,26 +221,28 @@ class Fuzzer:
 
             for idx in selected_indices:
                 if 0 <= idx < len(dropdown_elements):
-                    self.logger.info(f"Fuzzing dropdown {idx + 1} on the page.")
+                    dropdown_name = dropdown_elements[idx].get_attribute("name") or dropdown_elements[idx].get_attribute("id") or "Unnamed Dropdown"
+                    self.logger.info(f"Fuzzing dropdown '{dropdown_name}' (index {idx}) at URL: {self.driver.current_url}")
                     self.console_logger.info(f"👉 Fuzzing dropdown {idx + 1} on the page.")
                     self.fuzz_dropdown(dropdown_elements[idx], delay)
                 else:
                     self.console_logger.warning(f"⚠️ Invalid index '{idx}' entered. Skipping.")
-                    self.logger.warning(f"Invalid dropdown index '{idx}' entered.")
+                    self.logger.warning(f"Invalid dropdown index '{idx}' entered at URL: {self.driver.current_url}")
 
         except Exception as e:
             error_message = str(e) if str(e) else "Unknown error occurred while selecting dropdowns."
-            self.logger.error(f"Error handling dropdown selection: {error_message}")
+            self.logger.error(f"Error handling dropdown selection at URL: {self.driver.current_url}: {error_message}")
             self.console_logger.error(f"❌ Error handling dropdown selection: {error_message}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
         Interact with a dropdown element by selecting each option.
-
-        Args:
-            dropdown_element (WebElement): The dropdown element to fuzz.
-            delay (int): Time in seconds to wait between selections.
         """
+        dropdown_name = dropdown_element.get_attribute("name") or dropdown_element.get_attribute("id") or "Unnamed Dropdown"
+        current_url = self.driver.current_url
+        self.logger.info(f"Fuzzing dropdown '{dropdown_name}' at URL: {current_url}")
+        self.console_logger.info(f"👉 Fuzzing dropdown '{dropdown_name}'")
+
         before_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
 
         try:
@@ -248,7 +250,7 @@ class Fuzzer:
             options = select.options
             for index, option in enumerate(options):
                 select.select_by_index(index)
-                self.logger.info(f"Selected option '{option.text}' from dropdown.")
+                self.logger.info(f"Selected option '{option.text}' from dropdown '{dropdown_name}' at URL: {current_url}")
                 self.console_logger.info(f"✅ Selected option '{option.text}' from dropdown.")
                 WebDriverWait(self.driver, delay).until(lambda d: True)
 
@@ -256,9 +258,9 @@ class Fuzzer:
                 self.js_change_detector.capture_js_console_logs()
 
         except (StaleElementReferenceException, NoSuchElementException, WebDriverException, TimeoutException) as e:
-            error_message = str(e) if str(e) else "Unknown error occurred while interacting with the dropdown."
-            self.logger.error(f"Error fuzzing dropdown: {error_message}")
-            self.console_logger.error(f"❌ Error fuzzing dropdown: {error_message}")
+            error_message = str(e) if str(e) else "Unknown error occurred."
+            self.logger.error(f"Error fuzzing dropdown '{dropdown_name}' at URL: {current_url}: {error_message}")
+            self.console_logger.error(f"❌ Error fuzzing dropdown '{dropdown_name}': {error_message}")
 
         after_snapshot = self.take_snapshot(elements_to_track=[dropdown_element]) if self.track_state else None
         if self.track_state:
@@ -267,12 +269,6 @@ class Fuzzer:
     def take_snapshot(self, elements_to_track=None):
         """
         Take a snapshot of the page state.
-
-        Args:
-            elements_to_track (list): List of WebElement to track.
-
-        Returns:
-            dict: A dictionary containing page state information.
         """
         try:
             page_source = self.driver.page_source if elements_to_track is None else None
@@ -308,16 +304,11 @@ class Fuzzer:
     def compare_snapshots(self, before_snapshot, after_snapshot):
         """
         Compare two snapshots to detect any changes.
-
-        Args:
-            before_snapshot (dict): The initial state of the page.
-            after_snapshot (dict): The state after performing some action.
         """
         if not before_snapshot or not after_snapshot:
             self.logger.warning("Cannot compare snapshots; one or both snapshots are None.")
             return
 
-        # Compare page sources
         if before_snapshot.get('page_source') and after_snapshot.get('page_source'):
             before_source = before_snapshot['page_source']
             after_source = after_snapshot['page_source']
@@ -325,7 +316,7 @@ class Fuzzer:
             if before_source != after_source:
                 self.logger.info("Detected changes in the full page source.")
                 self.console_logger.info("✅ [Detected Changes]: The page source has changed. Please review the latest content.")
-                
+
                 diff = difflib.unified_diff(
                     before_source.splitlines(),
                     after_source.splitlines(),
@@ -340,7 +331,6 @@ class Fuzzer:
                 self.logger.info("No changes detected in the full page source.")
                 self.console_logger.info("ℹ️ [No Changes]: The page content appears to be stable, with no detected changes.")
 
-        # Compare specific elements if they were tracked
         for element_id in before_snapshot['elements']:
             before_element = before_snapshot['elements'].get(element_id)
             after_element = after_snapshot['elements'].get(element_id)
@@ -351,12 +341,10 @@ class Fuzzer:
                 self.logger.info(f"No changes detected in element '{element_id}'.")
                 self.console_logger.info(f"No changes detected in element '{element_id}'.")
 
-        # Compare URLs
         if before_snapshot['current_url'] != after_snapshot['current_url']:
             self.logger.warning(f"URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
             self.console_logger.warning(f"⚠️ URL changed from {before_snapshot['current_url']} to {after_snapshot['current_url']}.")
 
-        # Compare cookies
         if before_snapshot['cookies'] != after_snapshot['cookies']:
             self.logger.warning("Cookies have changed between snapshots.")
             self.console_logger.warning("⚠️ Cookies have changed between snapshots.")
