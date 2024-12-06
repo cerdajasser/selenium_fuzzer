@@ -20,7 +20,6 @@ class ReportGenerator:
     def parse_logs(self):
         """
         Parse only the latest log file in the log directory to extract information.
-        This ensures we see results from the most recent run without older logs mixing in.
         """
         if not os.path.exists(self.log_directory):
             print(f"Log directory {self.log_directory} not found.")
@@ -36,11 +35,21 @@ class ReportGenerator:
         latest_log_file = log_files[0]
         print(f"Parsing latest log file: {latest_log_file}")
 
-        # Updated regex patterns, allowing flexible prefixes:
+        # Updated regex patterns to match the actual logging style from fuzzer.py
+        # Assuming fuzzer.py logs lines like:
+        # "Fuzzing field 'fieldName' in iframe main page at URL: http://example.com"
         field_context_pattern = re.compile(r".*Fuzzing field '(.*?)' in iframe (.*?) at URL: (.*?)$")
-        field_fuzz_pattern = re.compile(r".*Successfully entered payload '(.*?)' into field '(.*?)'\.")
+
+        # Assuming fuzzer.py logs lines like:
+        # "Payload 'payloadValue' successfully entered into field 'fieldName' in iframe main page. URL: http://example.com"
+        # We only need payload and field here since iframe and URL come from the context line:
+        field_fuzz_pattern = re.compile(r".*Payload '(.*?)' successfully entered into field '(.*?)'")
+
+        # Dropdown patterns remain as before:
         dropdown_fuzz_pattern = re.compile(r".*Fuzzing dropdown '(.*?)' at URL: (.*?)$")
         dropdown_option_pattern = re.compile(r".*Selected option '(.*?)' from dropdown '(.*?)'")
+
+        # Errors pattern:
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         current_field_context = {}
@@ -64,6 +73,7 @@ class ReportGenerator:
                 ff_match = field_fuzz_pattern.search(line)
                 if ff_match and current_field_context:
                     payload = ff_match.group(1)
+                    # field_name captured from field_context
                     self.fuzzed_fields_details.append((
                         current_field_context['field_name'],
                         payload,
