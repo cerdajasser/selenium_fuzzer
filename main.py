@@ -2,20 +2,18 @@ import logging
 import argparse
 import os
 import time
+from urllib.parse import urlparse
+from datetime import datetime
+
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
 from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.selenium_driver import create_driver
-
-# Import ReportGenerator from your reporter.py
-from reporter import ReportGenerator
+from selenium_fuzzer.reporter import ReportGenerator
 
 def setup_logger(url):
-    """
-    Set up a logger that creates a new log file for each website.
-    """
     parsed_url = os.path.basename(url)
     domain = parsed_url.replace(":", "_").replace(".", "_")
     log_filename = os.path.join(Config.LOG_FOLDER, f"selenium_fuzzer_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
@@ -23,11 +21,8 @@ def setup_logger(url):
     logger = logging.getLogger(f"selenium_fuzzer_{domain}")
     logger.setLevel(logging.DEBUG)
 
-    # Create a file handler for the logger
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.DEBUG)
-
-    # Set formatter for handlers
     formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
 
@@ -47,7 +42,6 @@ def main():
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     args = parser.parse_args()
 
-    # Set up logging
     logger = setup_logger(args.url)
 
     driver = None
@@ -132,17 +126,25 @@ def main():
             print("\nClosed the browser and exited gracefully.")
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
-        # After fuzzing is completed and the driver is closed, generate the report
-        # Ensure reports directory exists
+        # After fuzzing is completed, generate the report
         reports_dir = "reports"
         if not os.path.exists(reports_dir):
             os.makedirs(reports_dir)
 
+        # Generate a run-specific filename
+        # Extract a human-readable part of the domain if possible
+        parsed = urlparse(args.url)
+        domain = parsed.netloc or "report"
+        # Clean the domain for filename use
+        safe_domain = domain.replace(":", "_").replace(".", "_")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
+        report_path = os.path.join(reports_dir, report_filename)
+
         reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots")
         reporter.parse_logs()
         reporter.find_screenshots()
-
-        report_path = os.path.join(reports_dir, "fuzzer_report.html")
         reporter.generate_report(report_path)
 
         print(f"\nReport generated at: {report_path}")
