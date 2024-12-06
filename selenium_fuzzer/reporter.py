@@ -18,9 +18,10 @@ class ReportGenerator:
             print(f"Log directory {self.log_directory} not found.")
             return
 
-        log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log")]
+        # Only consider files that start with "fuzzing_log_" and end with ".log"
+        log_files = [f for f in os.listdir(self.log_directory) if f.startswith("fuzzing_log_") and f.endswith(".log")]
         if not log_files:
-            print("No log files found in the log directory.")
+            print("No matching log files found in the log directory.")
             return
 
         # Sort by modification time (newest first)
@@ -29,16 +30,12 @@ class ReportGenerator:
         print(f"Parsing latest log file: {latest_log_file}")
 
         # Regex patterns based on the logs you provided:
-        # Fields (no separate context needed):
-        # Example line:
-        # Payload 'N/A' successfully entered into field 'Unnamed' in iframe main page. URL: http://localhost:8000/inputtypes.com/index.html
+        # Fields:
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
 
         # Dropdowns:
-        # Example line:
-        # Selected option 'Alphanumeric (With Spaces) - [a-zA-Z0-9s]+' from dropdown 'inputPattern' at URL: http://localhost:8000/inputtypes.com/index.html
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
