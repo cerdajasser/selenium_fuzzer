@@ -177,13 +177,12 @@ class Fuzzer:
                 self.js_change_detector.capture_js_console_logs()
 
             except (NoSuchElementException, TimeoutException, WebDriverException, StaleElementReferenceException) as e:
-                # Handle empty or malformed error messages
-                error_message = str(e) if str(e) else "Unknown error occurred. The error message was empty. This often occurs with input that the page is unable to process."
+                error_message = str(e) if str(e) else "Unknown error occurred."
                 self.logger.error(f"Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
                 self.console_logger.error(f"❌ Error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
             except Exception as e:
                 # General unexpected error
-                error_message = str(e) if str(e) else "Unexpected error occurred, but no details were available."
+                error_message = str(e) if str(e) else "Unexpected error occurred."
                 self.logger.error(f"Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
                 self.console_logger.error(f"❌ Unexpected error inserting payload '{payload_description}' into field '{input_element.get_attribute('name') or 'Unnamed'}': {error_message}")
 
@@ -193,31 +192,46 @@ class Fuzzer:
 
     def fuzz_dropdowns(self, selector="select", delay=1):
         """
-        Detect dropdown elements using the provided selector and interact with them.
-
-        Args:
-            selector (str): CSS selector to locate dropdowns.
-            delay (int): Time in seconds to wait between dropdown interactions.
+        Detect dropdown elements using the provided selector and interact with only the user-selected ones.
         """
         try:
             dropdown_elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
             self.logger.info(f"Found {len(dropdown_elements)} dropdown elements using selector '{selector}'.")
-            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.")
+            self.console_logger.info(f"Found {len(dropdown_elements)} dropdown elements on the page.\n")
 
             if not dropdown_elements:
                 self.logger.warning(f"No dropdown elements found using selector '{selector}'.")
                 self.console_logger.warning(f"⚠️ No dropdown elements found using selector '{selector}'.")
                 return
 
+            # Print dropdowns in a user-friendly format, similar to how we handle input fields
+            print(f"✅ Found {len(dropdown_elements)} dropdown element(s):")
+            print("   ────────────────────────────────────────────────")
             for idx, dropdown_element in enumerate(dropdown_elements):
-                self.logger.info(f"Interacting with dropdown {idx + 1} on the page.")
-                self.console_logger.info(f"👉 Interacting with dropdown {idx + 1} on the page.")
-                self.fuzz_dropdown(dropdown_element, delay)
+                dropdown_name = dropdown_element.get_attribute("name") or dropdown_element.get_attribute("id") or "Unnamed Dropdown"
+                print(f"   [{idx}] 📂 Name: {dropdown_name}")
+
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            selected_indices = input("\nPlease enter the indices of the dropdowns to fuzz (comma-separated): ")
+            selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+            if not selected_indices:
+                self.console_logger.info("No dropdowns selected for fuzzing.")
+                return
+
+            for idx in selected_indices:
+                if 0 <= idx < len(dropdown_elements):
+                    self.logger.info(f"Fuzzing dropdown {idx + 1} on the page.")
+                    self.console_logger.info(f"👉 Fuzzing dropdown {idx + 1} on the page.")
+                    self.fuzz_dropdown(dropdown_elements[idx], delay)
+                else:
+                    self.console_logger.warning(f"⚠️ Invalid index '{idx}' entered. Skipping.")
+                    self.logger.warning(f"Invalid dropdown index '{idx}' entered.")
 
         except Exception as e:
-            error_message = str(e) if str(e) else "Unknown error occurred while detecting dropdowns."
-            self.logger.error(f"Error detecting dropdowns: {error_message}")
-            self.console_logger.error(f"❌ Error detecting dropdowns: {error_message}")
+            error_message = str(e) if str(e) else "Unknown error occurred while selecting dropdowns."
+            self.logger.error(f"Error handling dropdown selection: {error_message}")
+            self.console_logger.error(f"❌ Error handling dropdown selection: {error_message}")
 
     def fuzz_dropdown(self, dropdown_element, delay=1):
         """
