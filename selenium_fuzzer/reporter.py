@@ -12,15 +12,15 @@ class ReportGenerator:
     def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots"):
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
-        self.fuzzed_fields_details = []    # List of tuples: (field_name, payload, iframe, url)
-        self.fuzzed_dropdowns_details = [] # List of tuples: (dropdown_name, option, url)
-        self.errors = []                   # List of tuples: (timestamp, error_level, error_message, url)
+        self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
+        self.fuzzed_dropdowns_details = [] # (dropdown_name, option, url)
+        self.errors = []                   # (timestamp, error_level, error_message, url)
         self.screenshots = []
 
     def parse_logs(self):
         """
         Parse all log files in the log directory to extract information.
-        Looks for patterns related to fields fuzzed, dropdowns interacted with, and errors encountered.
+        Updated regex patterns to allow flexible prefixes in log lines.
         """
         if not os.path.exists(self.log_directory):
             print(f"Log directory {self.log_directory} not found.")
@@ -28,17 +28,15 @@ class ReportGenerator:
 
         log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log")]
 
-        # Regex patterns to identify relevant lines
-        # Field contexts and payload insertions
-        field_context_pattern = re.compile(r"Fuzzing field '(.*?)' in iframe (.*?) at URL: (.*?)$")
-        field_fuzz_pattern = re.compile(r"Successfully entered payload '(.*?)' into field '(.*?)'\.")
-        
-        # Dropdown contexts and selections
-        dropdown_fuzz_pattern = re.compile(r"Fuzzing dropdown '(.*?)' at URL: (.*?)$")
-        dropdown_option_pattern = re.compile(r"Selected option '(.*?)' from dropdown '(.*?)'")
+        # Updated regex patterns with leading '.*' to allow emojis or other characters:
+        field_context_pattern = re.compile(r".*Fuzzing field '(.*?)' in iframe (.*?) at URL: (.*?)$")
+        field_fuzz_pattern = re.compile(r".*Successfully entered payload '(.*?)' into field '(.*?)'\.")
 
-        # Errors with timestamps and URL context
-        error_pattern = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
+        dropdown_fuzz_pattern = re.compile(r".*Fuzzing dropdown '(.*?)' at URL: (.*?)$")
+        dropdown_option_pattern = re.compile(r".*Selected option '(.*?)' from dropdown '(.*?)'")
+
+        # Error pattern should already be flexible, but we can add '.*' at start just in case:
+        error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         current_field_context = {}
         current_dropdown_context = {}
@@ -47,7 +45,7 @@ class ReportGenerator:
             log_path = os.path.join(self.log_directory, log_file)
             with open(log_path, 'r', encoding='utf-8') as lf:
                 for line in lf:
-                    # Capture field context
+                    # Field context
                     fc_match = field_context_pattern.search(line)
                     if fc_match:
                         field_name = fc_match.group(1)
@@ -59,12 +57,12 @@ class ReportGenerator:
                             'url': url
                         }
 
-                    # When a payload is inserted successfully into a field
+                    # Field fuzzing success
                     ff_match = field_fuzz_pattern.search(line)
                     if ff_match and current_field_context:
                         payload = ff_match.group(1)
-                        field_logged_name = ff_match.group(2)
-                        # Use the current_field_context for iframe and url
+                        # The field name from the match should correspond to the current field context
+                        # But if needed, we could confirm ff_match.group(2) == current_field_context['field_name']
                         self.fuzzed_fields_details.append((
                             current_field_context['field_name'],
                             payload,
@@ -72,7 +70,7 @@ class ReportGenerator:
                             current_field_context['url']
                         ))
 
-                    # Capture dropdown context
+                    # Dropdown context
                     dcf_match = dropdown_fuzz_pattern.search(line)
                     if dcf_match:
                         dropdown_name = dcf_match.group(1)
@@ -85,21 +83,32 @@ class ReportGenerator:
                     do_match = dropdown_option_pattern.search(line)
                     if do_match and current_dropdown_context:
                         option = do_match.group(1)
-                        dropdown_logged_name = do_match.group(2)
-                        # Use current dropdown context for url
+                        # This captures the dropdown name from the line, but we rely on current_dropdown_context
+                        # for the known dropdown we're currently fuzzing.
                         self.fuzzed_dropdowns_details.append((
                             current_dropdown_context['dropdown_name'],
                             option,
                             current_dropdown_context['url']
                         ))
 
-                    # Capture errors
+                    # Errors
                     e_match = error_pattern.search(line)
                     if e_match:
-                        timestamp = e_match.group(1)
-                        error_level = e_match.group(2)
-                        error_message = e_match.group(3)
-                        url = e_match.group(4)
+                        # Note: Adjusting groups due to extra '.*' at start.
+                        # e_match.group(1) is the '.*' captured portion (could be discarded)
+                        # Adjust indexing accordingly:
+                        # Assuming original pattern: (timestamp, level, message, url)
+                        # After adding ".*" at start, check group indexes:
+                        # We had something like: (.*)(\d{4}-\d{2}-\d{2}...) 
+                        # Let's re-check indexing:
+                        # Group(2): timestamp
+                        # Group(3): error_level
+                        # Group(4): message
+                        # Group(5): url
+                        timestamp = e_match.group(2)
+                        error_level = e_match.group(3)
+                        error_message = e_match.group(4)
+                        url = e_match.group(5)
                         self.errors.append((timestamp, error_level, error_message, url))
 
     def find_screenshots(self):
