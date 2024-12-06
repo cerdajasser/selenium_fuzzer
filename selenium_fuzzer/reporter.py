@@ -19,97 +19,85 @@ class ReportGenerator:
 
     def parse_logs(self):
         """
-        Parse all log files in the log directory to extract information.
-        Updated regex patterns to allow flexible prefixes in log lines.
+        Parse only the latest log file in the log directory to extract information.
+        This ensures we see results from the most recent run without older logs mixing in.
         """
         if not os.path.exists(self.log_directory):
             print(f"Log directory {self.log_directory} not found.")
             return
 
         log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log")]
+        if not log_files:
+            print("No log files found in the log directory.")
+            return
 
-        # Updated regex patterns with leading '.*' to allow emojis or other characters:
+        # Sort by modification time (newest first)
+        log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)), reverse=True)
+        latest_log_file = log_files[0]
+        print(f"Parsing latest log file: {latest_log_file}")
+
+        # Updated regex patterns, allowing flexible prefixes:
         field_context_pattern = re.compile(r".*Fuzzing field '(.*?)' in iframe (.*?) at URL: (.*?)$")
         field_fuzz_pattern = re.compile(r".*Successfully entered payload '(.*?)' into field '(.*?)'\.")
-
         dropdown_fuzz_pattern = re.compile(r".*Fuzzing dropdown '(.*?)' at URL: (.*?)$")
         dropdown_option_pattern = re.compile(r".*Selected option '(.*?)' from dropdown '(.*?)'")
-
-        # Error pattern should already be flexible, but we can add '.*' at start just in case:
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         current_field_context = {}
         current_dropdown_context = {}
 
-        for log_file in log_files:
-            log_path = os.path.join(self.log_directory, log_file)
-            with open(log_path, 'r', encoding='utf-8') as lf:
-                for line in lf:
-                    # Field context
-                    fc_match = field_context_pattern.search(line)
-                    if fc_match:
-                        field_name = fc_match.group(1)
-                        iframe_info = fc_match.group(2)
-                        url = fc_match.group(3)
-                        current_field_context = {
-                            'field_name': field_name,
-                            'iframe': iframe_info,
-                            'url': url
-                        }
+        with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
+            for line in lf:
+                # Field context
+                fc_match = field_context_pattern.search(line)
+                if fc_match:
+                    field_name = fc_match.group(1)
+                    iframe_info = fc_match.group(2)
+                    url = fc_match.group(3)
+                    current_field_context = {
+                        'field_name': field_name,
+                        'iframe': iframe_info,
+                        'url': url
+                    }
 
-                    # Field fuzzing success
-                    ff_match = field_fuzz_pattern.search(line)
-                    if ff_match and current_field_context:
-                        payload = ff_match.group(1)
-                        # The field name from the match should correspond to the current field context
-                        # But if needed, we could confirm ff_match.group(2) == current_field_context['field_name']
-                        self.fuzzed_fields_details.append((
-                            current_field_context['field_name'],
-                            payload,
-                            current_field_context['iframe'],
-                            current_field_context['url']
-                        ))
+                # Field fuzzing success
+                ff_match = field_fuzz_pattern.search(line)
+                if ff_match and current_field_context:
+                    payload = ff_match.group(1)
+                    self.fuzzed_fields_details.append((
+                        current_field_context['field_name'],
+                        payload,
+                        current_field_context['iframe'],
+                        current_field_context['url']
+                    ))
 
-                    # Dropdown context
-                    dcf_match = dropdown_fuzz_pattern.search(line)
-                    if dcf_match:
-                        dropdown_name = dcf_match.group(1)
-                        url = dcf_match.group(2)
-                        current_dropdown_context = {
-                            'dropdown_name': dropdown_name,
-                            'url': url
-                        }
+                # Dropdown context
+                dcf_match = dropdown_fuzz_pattern.search(line)
+                if dcf_match:
+                    dropdown_name = dcf_match.group(1)
+                    url = dcf_match.group(2)
+                    current_dropdown_context = {
+                        'dropdown_name': dropdown_name,
+                        'url': url
+                    }
 
-                    do_match = dropdown_option_pattern.search(line)
-                    if do_match and current_dropdown_context:
-                        option = do_match.group(1)
-                        # This captures the dropdown name from the line, but we rely on current_dropdown_context
-                        # for the known dropdown we're currently fuzzing.
-                        self.fuzzed_dropdowns_details.append((
-                            current_dropdown_context['dropdown_name'],
-                            option,
-                            current_dropdown_context['url']
-                        ))
+                do_match = dropdown_option_pattern.search(line)
+                if do_match and current_dropdown_context:
+                    option = do_match.group(1)
+                    self.fuzzed_dropdowns_details.append((
+                        current_dropdown_context['dropdown_name'],
+                        option,
+                        current_dropdown_context['url']
+                    ))
 
-                    # Errors
-                    e_match = error_pattern.search(line)
-                    if e_match:
-                        # Note: Adjusting groups due to extra '.*' at start.
-                        # e_match.group(1) is the '.*' captured portion (could be discarded)
-                        # Adjust indexing accordingly:
-                        # Assuming original pattern: (timestamp, level, message, url)
-                        # After adding ".*" at start, check group indexes:
-                        # We had something like: (.*)(\d{4}-\d{2}-\d{2}...) 
-                        # Let's re-check indexing:
-                        # Group(2): timestamp
-                        # Group(3): error_level
-                        # Group(4): message
-                        # Group(5): url
-                        timestamp = e_match.group(2)
-                        error_level = e_match.group(3)
-                        error_message = e_match.group(4)
-                        url = e_match.group(5)
-                        self.errors.append((timestamp, error_level, error_message, url))
+                # Errors
+                e_match = error_pattern.search(line)
+                if e_match:
+                    timestamp = e_match.group(2)
+                    error_level = e_match.group(3)
+                    error_message = e_match.group(4)
+                    url = e_match.group(5)
+                    self.errors.append((timestamp, error_level, error_message, url))
 
     def find_screenshots(self):
         """
