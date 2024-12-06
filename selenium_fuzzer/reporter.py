@@ -27,21 +27,21 @@ class ReportGenerator:
         latest_log_file = log_files[0]
         print(f"Parsing latest log file: {latest_log_file}")
 
-        # Regex for field fuzz (no context line needed now):
+        # Regex patterns based on the provided logs:
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
 
-        dropdown_fuzz_pattern = re.compile(r".*Fuzzing dropdown '(.*?)' at URL: (.*?)$")
-        dropdown_option_pattern = re.compile(r".*Selected option '(.*?)' from dropdown '(.*?)'")
+        dropdown_option_pattern = re.compile(
+            r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
+        )
 
+        # Error lines (if any):
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
-            current_dropdown_context = {}
-
             for line in lf:
-                # Field fuzzing success
+                # Fields
                 ff_match = field_fuzz_pattern.search(line)
                 if ff_match:
                     payload = ff_match.group(1)
@@ -50,24 +50,13 @@ class ReportGenerator:
                     url = ff_match.group(4)
                     self.fuzzed_fields_details.append((field_name, payload, iframe_info, url))
 
-                # Dropdown context and options remain the same
-                dcf_match = dropdown_fuzz_pattern.search(line)
-                if dcf_match:
-                    dropdown_name = dcf_match.group(1)
-                    url = dcf_match.group(2)
-                    current_dropdown_context = {
-                        'dropdown_name': dropdown_name,
-                        'url': url
-                    }
-
+                # Dropdowns
                 do_match = dropdown_option_pattern.search(line)
-                if do_match and current_dropdown_context:
+                if do_match:
                     option = do_match.group(1)
-                    self.fuzzed_dropdowns_details.append((
-                        current_dropdown_context['dropdown_name'],
-                        option,
-                        current_dropdown_context['url']
-                    ))
+                    dropdown_name = do_match.group(2)
+                    url = do_match.group(3)
+                    self.fuzzed_dropdowns_details.append((dropdown_name, option, url))
 
                 # Errors
                 e_match = error_pattern.search(line)
