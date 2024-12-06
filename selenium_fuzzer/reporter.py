@@ -4,11 +4,6 @@ import datetime
 from typing import List, Dict
 
 class ReportGenerator:
-    """
-    The ReportGenerator parses logs and compiles a summary of what was fuzzed, what dropdowns were checked,
-    and what errors occurred. It can also include screenshots taken during the fuzzing process.
-    """
-
     def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots"):
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
@@ -18,9 +13,6 @@ class ReportGenerator:
         self.screenshots = []
 
     def parse_logs(self):
-        """
-        Parse only the latest log file in the log directory to extract information.
-        """
         if not os.path.exists(self.log_directory):
             print(f"Log directory {self.log_directory} not found.")
             return
@@ -35,53 +27,30 @@ class ReportGenerator:
         latest_log_file = log_files[0]
         print(f"Parsing latest log file: {latest_log_file}")
 
-        # Updated regex patterns to match the actual logging style from fuzzer.py
-        # Assuming fuzzer.py logs lines like:
-        # "Fuzzing field 'fieldName' in iframe main page at URL: http://example.com"
-        field_context_pattern = re.compile(r".*Fuzzing field '(.*?)' in iframe (.*?) at URL: (.*?)$")
+        # Regex for field fuzz (no context line needed now):
+        field_fuzz_pattern = re.compile(
+            r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
+        )
 
-        # Assuming fuzzer.py logs lines like:
-        # "Payload 'payloadValue' successfully entered into field 'fieldName' in iframe main page. URL: http://example.com"
-        # We only need payload and field here since iframe and URL come from the context line:
-        field_fuzz_pattern = re.compile(r".*Payload '(.*?)' successfully entered into field '(.*?)'")
-
-        # Dropdown patterns remain as before:
         dropdown_fuzz_pattern = re.compile(r".*Fuzzing dropdown '(.*?)' at URL: (.*?)$")
         dropdown_option_pattern = re.compile(r".*Selected option '(.*?)' from dropdown '(.*?)'")
 
-        # Errors pattern:
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
-        current_field_context = {}
-        current_dropdown_context = {}
-
         with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
-            for line in lf:
-                # Field context
-                fc_match = field_context_pattern.search(line)
-                if fc_match:
-                    field_name = fc_match.group(1)
-                    iframe_info = fc_match.group(2)
-                    url = fc_match.group(3)
-                    current_field_context = {
-                        'field_name': field_name,
-                        'iframe': iframe_info,
-                        'url': url
-                    }
+            current_dropdown_context = {}
 
+            for line in lf:
                 # Field fuzzing success
                 ff_match = field_fuzz_pattern.search(line)
-                if ff_match and current_field_context:
+                if ff_match:
                     payload = ff_match.group(1)
-                    # field_name captured from field_context
-                    self.fuzzed_fields_details.append((
-                        current_field_context['field_name'],
-                        payload,
-                        current_field_context['iframe'],
-                        current_field_context['url']
-                    ))
+                    field_name = ff_match.group(2)
+                    iframe_info = ff_match.group(3)
+                    url = ff_match.group(4)
+                    self.fuzzed_fields_details.append((field_name, payload, iframe_info, url))
 
-                # Dropdown context
+                # Dropdown context and options remain the same
                 dcf_match = dropdown_fuzz_pattern.search(line)
                 if dcf_match:
                     dropdown_name = dcf_match.group(1)
@@ -110,16 +79,10 @@ class ReportGenerator:
                     self.errors.append((timestamp, error_level, error_message, url))
 
     def find_screenshots(self):
-        """
-        Identify screenshot files in the screenshot directory.
-        """
         if os.path.exists(self.screenshot_directory):
             self.screenshots = [f for f in os.listdir(self.screenshot_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
 
     def generate_report(self, output_file: str = "report.html"):
-        """
-        Generate an HTML report summarizing the fuzzing session with improved styling and easier navigation.
-        """
         html = [
             "<!DOCTYPE html>",
             "<html lang='en'>",
