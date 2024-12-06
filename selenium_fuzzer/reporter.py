@@ -7,6 +7,7 @@ class ReportGenerator:
     def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots"):
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
+        # Data structures
         self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
         self.fuzzed_dropdowns_details = [] # (dropdown_name, option, url)
         self.errors = []                   # (timestamp, error_level, error_message, url)
@@ -27,16 +28,22 @@ class ReportGenerator:
         latest_log_file = log_files[0]
         print(f"Parsing latest log file: {latest_log_file}")
 
-        # Regex patterns based on the provided logs:
+        # Regex patterns based on the logs you provided:
+        # Fields (no separate context needed):
+        # Example line:
+        # Payload 'N/A' successfully entered into field 'Unnamed' in iframe main page. URL: http://localhost:8000/inputtypes.com/index.html
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
 
+        # Dropdowns:
+        # Example line:
+        # Selected option 'Alphanumeric (With Spaces) - [a-zA-Z0-9s]+' from dropdown 'inputPattern' at URL: http://localhost:8000/inputtypes.com/index.html
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
 
-        # Error lines (if any):
+        # Errors:
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
