@@ -18,34 +18,36 @@ class ReportGenerator:
             print(f"Log directory {self.log_directory} not found.")
             return
 
+        # Only consider files that start with "fuzzing_log_" and end with ".log"
         log_files = [f for f in os.listdir(self.log_directory) if f.startswith("fuzzing_log_") and f.endswith(".log")]
         if not log_files:
             print("No matching log files found in the log directory.")
             return
 
+        # Sort by modification time (newest first)
         log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)), reverse=True)
         latest_log_file = log_files[0]
         print(f"Parsing latest log file: {latest_log_file}")
 
+        # Regex patterns based on the logs you provided:
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
-
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
-
         error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
         with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
             for line in lf:
+                # Fields
                 ff_match = field_fuzz_pattern.search(line)
                 if ff_match:
                     payload = ff_match.group(1)
                     field_name = ff_match.group(2)
                     iframe_info = ff_match.group(3)
                     url = ff_match.group(4)
-                    # Escape these values to prevent XSS
+                    # Escape values to prevent XSS
                     self.fuzzed_fields_details.append((
                         html.escape(field_name),
                         html.escape(payload),
@@ -53,6 +55,7 @@ class ReportGenerator:
                         html.escape(url)
                     ))
 
+                # Dropdowns
                 do_match = dropdown_option_pattern.search(line)
                 if do_match:
                     option = do_match.group(1)
@@ -65,6 +68,7 @@ class ReportGenerator:
                         html.escape(url)
                     ))
 
+                # Errors
                 e_match = error_pattern.search(line)
                 if e_match:
                     timestamp = e_match.group(2)
@@ -101,10 +105,10 @@ class ReportGenerator:
             ".container { max-width: 1200px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }",
             "h2, h3 { color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; }",
             "p, li { line-height: 1.6; }",
-            /* Ensure long payloads wrap gracefully */
             "table { border-collapse: collapse; width: 100%; margin-bottom: 20px; table-layout: fixed; }",
             "th, td { border: 1px solid #ccc; padding: 10px; text-align: left; font-size: 0.95em; word-wrap: break-word; white-space: pre-wrap; }",
             "th { background: #f0f0f0; font-weight: bold; }",
+            "/* Ensure long payloads wrap gracefully */",
             ".error { color: red; font-weight: bold; }",
             ".screenshot { margin: 10px 0; max-width: 600px; border: 1px solid #ccc; padding: 5px; background: #fafafa; }",
             ".section { margin-bottom: 40px; }",
