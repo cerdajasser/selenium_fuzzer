@@ -9,6 +9,9 @@ from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.selenium_driver import create_driver
 
+# Import ReportGenerator from your reporter.py
+from reporter import ReportGenerator
+
 def setup_logger(url):
     """
     Set up a logger that creates a new log file for each website.
@@ -128,6 +131,22 @@ def main():
             driver.quit()
             print("\nClosed the browser and exited gracefully.")
             logger.info("\n>>> Closed the browser and exited gracefully.\n")
+
+        # After fuzzing is completed and the driver is closed, generate the report
+        # Ensure reports directory exists
+        reports_dir = "reports"
+        if not os.path.exists(reports_dir):
+            os.makedirs(reports_dir)
+
+        reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots")
+        reporter.parse_logs()
+        reporter.find_screenshots()
+
+        report_path = os.path.join(reports_dir, "fuzzer_report.html")
+        reporter.generate_report(report_path)
+
+        print(f"\nReport generated at: {report_path}")
+        logger.info(f"Report generated at: {report_path}")
 
 if __name__ == "__main__":
     main()
