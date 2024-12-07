@@ -4,7 +4,6 @@ import os
 import time
 from urllib.parse import urlparse
 from datetime import datetime
-
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -12,6 +11,7 @@ from selenium_fuzzer.js_change_detector import JavaScriptChangeDetector
 from selenium_fuzzer.fuzzer import Fuzzer
 from selenium_fuzzer.selenium_driver import create_driver
 from selenium_fuzzer.reporter import ReportGenerator
+import platform
 
 def setup_logger(url):
     parsed_url = os.path.basename(url)
@@ -31,15 +31,43 @@ def setup_logger(url):
 
     return logger
 
-def take_screenshot_on_error(driver):
-    """Take a screenshot of the current browser window and save it to the screenshots directory."""
-    if driver:
-        if not os.path.exists("screenshots"):
-            os.makedirs("screenshots")
-        screenshot_filename = f"error_{time.strftime('%Y%m%d_%H%M%S')}.png"
-        screenshot_path = os.path.join("screenshots", screenshot_filename)
-        driver.save_screenshot(screenshot_path)
-        print(f"📸 Saved error screenshot: {screenshot_path}")
+def capture_artifacts_on_error(driver, run_id, scenario, last_action, last_element):
+    """Capture artifacts (screenshots, console logs, DOM snapshot) on error."""
+    timestamp_str = time.strftime('%Y%m%d_%H%M%S')
+    artifacts_dir = "artifacts"
+    if not os.path.exists(artifacts_dir):
+        os.makedirs(artifacts_dir)
+
+    # Screenshot
+    screenshot_path = os.path.join(artifacts_dir, f"error_screenshot_{run_id}_{timestamp_str}.png")
+    driver.save_screenshot(screenshot_path)
+
+    # Console logs (browser)
+    console_logs_path = os.path.join(artifacts_dir, f"console_logs_{run_id}_{timestamp_str}.log")
+    try:
+        logs = driver.get_log('browser')
+        with open(console_logs_path, 'w', encoding='utf-8') as f:
+            f.write(f"Run ID: {run_id}\nScenario: {scenario}\nLast Action: {last_action}\nLast Element: {last_element}\nCurrent URL: {driver.current_url}\n\n")
+            for entry in logs:
+                f.write(f"{entry['timestamp']} {entry['level']} {entry['message']}\n")
+    except Exception as e:
+        # If we can't get console logs, log that fact
+        with open(console_logs_path, 'w', encoding='utf-8') as f:
+            f.write("No console logs available.\n")
+
+    # DOM snapshot
+    dom_path = os.path.join(artifacts_dir, f"dom_snapshot_{run_id}_{timestamp_str}.html")
+    with open(dom_path, 'w', encoding='utf-8') as f:
+        f.write(f"<!-- Run ID: {run_id}, Scenario: {scenario}, Last Action: {last_action}, Last Element: {last_element}, URL: {driver.current_url} -->\n")
+        f.write(driver.page_source)
+
+    print(f"📸 Saved error screenshot: {screenshot_path}")
+    print(f"📜 Saved console logs: {console_logs_path}")
+    print(f"📄 Saved DOM snapshot: {dom_path}")
+
+    # Store references somewhere accessible; reporter.py can later scan this directory and link artifacts.
+    # We could log these paths with the logger as well.
+    logging.getLogger().info(f"Artifacts saved: screenshot={screenshot_path}, console={console_logs_path}, dom={dom_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -51,14 +79,25 @@ def main():
     parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     parser.add_argument("--aggregate-only", action="store_true", help="Generate an aggregated report from existing logs without running fuzzing.")
+    parser.add_argument("--run-id", default="default_run", help="A unique run ID to correlate logs and artifacts.")
+    parser.add_argument("--scenario", default="default_scenario", help="A scenario/test case name for additional context.")
     args = parser.parse_args()
 
     # Record the start time of the run
     run_start_time = datetime.now()
 
+    # Basic environment info for logging
+    system_info = f"OS: {platform.system()} {platform.release()}, Browser: Chrome/Unknown"
+    # Browser version retrieval would require devtools or capabilities check
+    # For demonstration, we just log headless mode and devtools:
+    env_info = f"Headless: {args.headless}, DevTools: {args.devtools}, Scenario: {args.scenario}, Run ID: {args.run_id}, {system_info}"
+
     if not args.aggregate_only:
         logger = setup_logger(args.url)
+        logger.info("Environment Info: " + env_info)
         driver = None
+        last_action = "Initialization"
+        last_element = "N/A"
         try:
             headless = args.headless or Config.SELENIUM_HEADLESS
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -78,7 +117,7 @@ def main():
             print("🔍 JavaScript for DOM mutation monitoring injected successfully.\n")
 
             logger.info(f"\n>>> Accessing the target URL: {args.url}\n")
-            print(f"🌐 Accessing URL: {args.url}...\n")
+            last_action = "Accessing URL"
             driver.get(args.url)
 
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -86,6 +125,7 @@ def main():
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
             fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
+            last_action = "Initializing Fuzzer"
 
             # Fuzz input fields if requested
             if args.fuzz_fields:
@@ -93,6 +133,7 @@ def main():
                 print("   - Including hidden elements, dynamically loaded elements, and elements inside iframes...\n")
                 logger.info("\n=== Detecting Input Fields on the Page ===\n")
                 try:
+                    last_action = "Detecting Input Fields"
                     input_fields = fuzzer.detect_inputs()
                     if not input_fields:
                         logger.warning("\n!!! No input fields detected on the page.\n")
@@ -112,36 +153,33 @@ def main():
                         payloads = generate_safe_payloads()
                         for idx in selected_indices:
                             if 0 <= idx < len(input_fields):
+                                last_action = f"Fuzzing field at index {idx}"
+                                last_element = input_fields[idx][1].get_attribute('name') or 'Unnamed'
                                 fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
-                except (NoSuchElementException, TimeoutException) as e:
-                    logger.error(f"\n!!! Error during input fuzzing: {e}\n")
-                    take_screenshot_on_error(driver)
                 except Exception as e:
                     logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
-                    take_screenshot_on_error(driver)
+                    capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
 
             # Check dropdown menus if requested
             if args.check_dropdowns:
                 print("\n📋 Checking dropdown menus on the page...")
                 logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
                 try:
+                    last_action = "Fuzzing Dropdowns"
                     fuzzer.fuzz_dropdowns(delay=args.delay)
-                except (NoSuchElementException, TimeoutException) as e:
-                    logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
-                    take_screenshot_on_error(driver)
                 except Exception as e:
                     logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
-                    take_screenshot_on_error(driver)
+                    capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
 
         except (WebDriverException, TimeoutException) as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
-            take_screenshot_on_error(driver)
+            capture_artifacts_on_error(driver, args.run_id, args.scenario, "N/A", "N/A")
         except Exception as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
-            take_screenshot_on_error(driver)
+            capture_artifacts_on_error(driver, args.run_id, args.scenario, "N/A", "N/A")
         finally:
             if driver:
                 driver.quit()
@@ -149,7 +187,7 @@ def main():
                 if 'logger' in locals():
                     logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
-    # After fuzzing is completed or if in aggregate-only mode, generate the report
+    # After fuzzing or if in aggregate-only mode, generate the report
     reports_dir = "reports"
     if not os.path.exists(reports_dir):
         os.makedirs(reports_dir)
@@ -161,7 +199,6 @@ def main():
     report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
     report_path = os.path.join(reports_dir, report_filename)
 
-    # Pass run_start_time to ReportGenerator to filter logs
     reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots", run_start_time=run_start_time)
     reporter.parse_logs()
     reporter.find_screenshots()

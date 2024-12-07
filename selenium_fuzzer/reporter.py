@@ -17,9 +17,15 @@ class ReportGenerator:
 
         self.js_errors = []    # (timestamp, message, url)
         self.js_warnings = []  # (timestamp, message, url)
-        self.visited_urls = []    # URLs accessed by Selenium
-        self.fuzzer_actions = []  # Actions performed by Selenium fuzzer
+        self.visited_urls = [] # URLs accessed by Selenium
+        self.fuzzer_actions = [] # Actions performed by Selenium fuzzer
         self.screenshots = []
+
+        # New artifact collections
+        self.artifacts_dir = "artifacts"
+        self.console_logs = []    # list of console log files
+        self.dom_snapshots = []   # list of dom snapshot files
+        self.artifact_screenshots = [] # Additional screenshots stored in artifacts directory
 
     def parse_logs(self):
         if not os.path.exists(self.log_directory):
@@ -154,8 +160,25 @@ class ReportGenerator:
                             self.fuzzer_actions.append(html.escape(action_desc))
 
     def find_screenshots(self):
+        # Existing screenshot logic
         if os.path.exists(self.screenshot_directory):
             self.screenshots = [f for f in os.listdir(self.screenshot_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+
+        # Also scan for additional artifacts in `artifacts` directory
+        self.console_logs = []
+        self.dom_snapshots = []
+        self.artifact_screenshots = []
+        artifacts_dir = "artifacts"
+        if os.path.exists(artifacts_dir):
+            for f in os.listdir(artifacts_dir):
+                fp = os.path.join(artifacts_dir, f)
+                if os.path.isfile(fp):
+                    if f.lower().endswith(".log"):
+                        self.console_logs.append(f)
+                    elif f.lower().endswith(".html"):
+                        self.dom_snapshots.append(f)
+                    elif f.lower().endswith((".png", ".jpg", ".jpeg")):
+                        self.artifact_screenshots.append(f)
 
     def generate_report(self, output_file: str = "report.html"):
         html_content = [
@@ -178,7 +201,6 @@ class ReportGenerator:
             "table { border-collapse: collapse; width: 100%; margin-bottom: 20px; table-layout: fixed; }",
             "th, td { border: 1px solid #ccc; padding: 10px; text-align: left; font-size: 0.95em; word-wrap: break-word; white-space: pre-wrap; }",
             "th { background: #f0f0f0; font-weight: bold; }",
-            "/* Ensure long payloads wrap gracefully */",
             ".error { color: red; font-weight: bold; }",
             ".screenshot { margin: 10px 0; max-width: 600px; border: 1px solid #ccc; padding: 5px; background: #fafafa; }",
             ".section { margin-bottom: 40px; }",
@@ -198,6 +220,7 @@ class ReportGenerator:
             "<a href='#jswarnings'>⚠️ JS Warnings</a>",
             "<a href='#fuzzeractions'>🎬 Fuzzer Actions</a>",
             "<a href='#screenshots'>📷 Screenshots</a>",
+            "<a href='#artifacts'>🗂️ Artifacts</a>",
             "</nav>",
             "<div class='container'>"
         ]
@@ -302,6 +325,41 @@ class ReportGenerator:
         else:
             html_content.append("<p class='no-data'>No screenshots found.</p>")
         html_content.append("</div>")
+
+        # Artifacts Section
+        html_content.append("<div class='section' id='artifacts'>")
+        html_content.append("<h2>🗂️ Additional Artifacts</h2>")
+
+        artifacts_dir = "artifacts"
+        if not (self.console_logs or self.dom_snapshots or self.artifact_screenshots):
+            html_content.append("<p class='no-data'>No additional artifacts found.</p>")
+        else:
+            # Console logs
+            if self.console_logs:
+                html_content.append("<h3>Console Logs</h3>")
+                html_content.append("<ul>")
+                for c_log in self.console_logs:
+                    artifact_path = os.path.join(artifacts_dir, c_log)
+                    html_content.append(f"<li><a href='{artifact_path}' target='_blank'>{c_log}</a></li>")
+                html_content.append("</ul>")
+
+            # DOM Snapshots
+            if self.dom_snapshots:
+                html_content.append("<h3>DOM Snapshots</h3>")
+                html_content.append("<ul>")
+                for dom_file in self.dom_snapshots:
+                    artifact_path = os.path.join(artifacts_dir, dom_file)
+                    html_content.append(f"<li><a href='{artifact_path}' target='_blank'>{dom_file}</a></li>")
+                html_content.append("</ul>")
+
+            # Additional Screenshots
+            if self.artifact_screenshots:
+                html_content.append("<h3>Artifact Screenshots</h3>")
+                for ss in self.artifact_screenshots:
+                    artifact_path = os.path.join(artifacts_dir, ss)
+                    html_content.append(f"<div class='screenshot'><img src='{html.escape(artifact_path)}' alt='{html.escape(ss)}' style='max-width:100%;'/><br><small>{html.escape(ss)}</small></div>")
+
+        html_content.append("</div>")  # artifacts section
 
         html_content.append("</div>")  # .container
         html_content.append("</body></html>")
