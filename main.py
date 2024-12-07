@@ -31,6 +31,16 @@ def setup_logger(url):
 
     return logger
 
+def take_screenshot_on_error(driver):
+    """Take a screenshot of the current browser window and save it to the screenshots directory."""
+    if driver:
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
+        screenshot_filename = f"error_{time.strftime('%Y%m%d_%H%M%S')}.png"
+        screenshot_path = os.path.join("screenshots", screenshot_filename)
+        driver.save_screenshot(screenshot_path)
+        print(f"📸 Saved error screenshot: {screenshot_path}")
+
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
     parser.add_argument("url", help="The URL to run the fuzzer against.")
@@ -46,7 +56,6 @@ def main():
     # Record the start time of the run
     run_start_time = datetime.now()
 
-    # If we're only aggregating logs, we skip fuzzing and just produce the report.
     if not args.aggregate_only:
         logger = setup_logger(args.url)
         driver = None
@@ -107,8 +116,10 @@ def main():
 
                 except (NoSuchElementException, TimeoutException) as e:
                     logger.error(f"\n!!! Error during input fuzzing: {e}\n")
+                    take_screenshot_on_error(driver)
                 except Exception as e:
                     logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
+                    take_screenshot_on_error(driver)
 
             # Check dropdown menus if requested
             if args.check_dropdowns:
@@ -118,15 +129,19 @@ def main():
                     fuzzer.fuzz_dropdowns(delay=args.delay)
                 except (NoSuchElementException, TimeoutException) as e:
                     logger.error(f"\n!!! Error during dropdown interaction: {e}\n")
+                    take_screenshot_on_error(driver)
                 except Exception as e:
                     logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
+                    take_screenshot_on_error(driver)
 
         except (WebDriverException, TimeoutException) as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
+            take_screenshot_on_error(driver)
         except Exception as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
+            take_screenshot_on_error(driver)
         finally:
             if driver:
                 driver.quit()
@@ -134,7 +149,7 @@ def main():
                 if 'logger' in locals():
                     logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
-    # After fuzzing is completed or if we ran in aggregate-only mode, generate the report
+    # After fuzzing is completed or if in aggregate-only mode, generate the report
     reports_dir = "reports"
     if not os.path.exists(reports_dir):
         os.makedirs(reports_dir)
