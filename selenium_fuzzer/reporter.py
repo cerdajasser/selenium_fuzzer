@@ -9,20 +9,16 @@ class ReportGenerator:
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
 
-        # Existing data
+        # Data structures for aggregated results
         self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
         self.fuzzed_dropdowns_details = [] # (dropdown_name, option, url)
-        self.errors = []                   # (timestamp, error_level, error_message, url)
+        self.errors = []                   # (timestamp, level, message, url)
 
-        # New data for js_change_detector logs
         self.js_errors = []    # (timestamp, message, url)
         self.js_warnings = []  # (timestamp, message, url)
-        self.js_logs = []      # For informational JS logs if needed
 
-        # New data for selenium_fuzzer logs
         self.visited_urls = []    # URLs accessed by Selenium
-        self.fuzzer_actions = []  # Actions like "Checking Dropdown Menus", "Starting the Fuzzer", etc.
-
+        self.fuzzer_actions = []  # Actions performed by Selenium fuzzer
         self.screenshots = []
 
     def parse_logs(self):
@@ -41,32 +37,31 @@ class ReportGenerator:
             print("No matching log files found in the log directory.")
             return
 
-        # Sort by modification time
         log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)))
 
-        # Regex patterns for fuzzing logs (fields, dropdowns, errors)
+        # Regex patterns for fuzzing logs
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
-        fuzz_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
+        # Updated error pattern to make 'at URL:' optional
+        # Groups:
+        # 2: timestamp
+        # 3: error level (ERROR or CRITICAL)
+        # 4: error message
+        # 5: URL (optional)
+        fuzz_error_pattern = re.compile(
+            r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?)(?: at URL: (.*))?$"
+        )
 
         # Regex patterns for js_change_detector logs
-        # Example of error line:
-        # ERROR - JavaScript Error from DevTools: http://localhost:8000/api/state?key=inputtypes.com - Failed to load resource...
         js_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*ERROR - JavaScript Error from DevTools: (.*?) - (.*)")
-        # Example warning line:
-        # WARNING - JavaScript Warning from DevTools: http://localhost:8000/inputtypes.com/js/index.js 6169 The specified value ""
         js_warning_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*WARNING - JavaScript Warning from DevTools: (.*?) (.*)")
 
-        # Regex patterns for selenium_fuzzer logs
-        # Accessed URL line:
-        # >>> Accessing the target URL: http://localhost:8000/inputtypes.com/index.html
+        # Regex for selenium_fuzzer logs
         accessed_url_pattern = re.compile(r".*Accessing the target URL:\s*(.*?)$")
-        # Actions like checking dropdowns:
-        # === Checking Dropdown Menus on the Page ===
         action_pattern = re.compile(r".*=== (.*?) ===")
 
         for log_file in log_files:
@@ -74,7 +69,6 @@ class ReportGenerator:
             print(f"Parsing log file: {log_file}")
             with open(log_path, 'r', encoding='utf-8') as lf:
                 for line in lf:
-                    # Check file type:
                     if log_file.startswith("fuzzing_log_"):
                         # Fields
                         ff_match = field_fuzz_pattern.search(line)
@@ -108,7 +102,7 @@ class ReportGenerator:
                             timestamp = fe_match.group(2)
                             error_level = fe_match.group(3)
                             error_message = fe_match.group(4)
-                            url = fe_match.group(5)
+                            url = fe_match.group(5) if fe_match.group(5) else "N/A"
                             self.errors.append((
                                 html.escape(timestamp),
                                 html.escape(error_level),
@@ -121,6 +115,8 @@ class ReportGenerator:
                         je_match = js_error_pattern.search(line)
                         if je_match:
                             timestamp = je_match.group(2)
+                            # In the js_error_pattern, group(3) is URL and group(4) is message or vice versa?
+                            # Pattern: ...Error from DevTools: (URL) - (MESSAGE)
                             url = je_match.group(3)
                             message = je_match.group(4)
                             self.js_errors.append((
@@ -133,6 +129,7 @@ class ReportGenerator:
                         jw_match = js_warning_pattern.search(line)
                         if jw_match:
                             timestamp = jw_match.group(2)
+                            # Pattern: ...Warning from DevTools: (URL) (MESSAGE)
                             url = jw_match.group(3)
                             message = jw_match.group(4)
                             self.js_warnings.append((
@@ -155,8 +152,8 @@ class ReportGenerator:
                             self.fuzzer_actions.append(html.escape(action_desc))
 
     def find_screenshots(self):
-        if os.path.exists(self.screenshots_directory):
-            self.screenshots = [f for f in os.listdir(self.screenshots_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+        if os.path.exists(self.screenshot_directory):
+            self.screenshots = [f for f in os.listdir(self.screenshot_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
 
     def generate_report(self, output_file: str = "report.html"):
         html_content = [
@@ -268,7 +265,7 @@ class ReportGenerator:
             html_content.append("<p class='no-data'>No JS warnings found.</p>")
         html_content.append("</div>")
 
-        # Selenium Fuzzer Actions
+        # Selenium Fuzzer Actions & Visited URLs
         html_content.append("<div class='section' id='fuzzeractions'>")
         html_content.append("<h2>🎬 Selenium Fuzzer Actions & Visited URLs</h2>")
 
