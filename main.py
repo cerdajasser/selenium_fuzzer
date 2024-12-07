@@ -157,10 +157,6 @@ def main():
                                 last_element = input_fields[idx][1].get_attribute('name') or 'Unnamed'
                                 fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
 
-                except Exception as e:
-                    logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
-                    capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
-
             # Check dropdown menus if requested
             if args.check_dropdowns:
                 print("\n📋 Checking dropdown menus on the page...")
@@ -199,9 +195,10 @@ def main():
     report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
     report_path = os.path.join(reports_dir, report_filename)
 
-    reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots", run_start_time=run_start_time)
+    # Initialize ReportGenerator with updated artifact_directory
+    reporter = ReportGenerator(log_directory="log", artifact_directory="artifacts", run_start_time=run_start_time)
     reporter.parse_logs()
-    reporter.find_screenshots()
+    reporter.find_artifacts("artifacts")
     reporter.generate_report(report_path)
 
     print(f"\nReport generated at: {report_path}")

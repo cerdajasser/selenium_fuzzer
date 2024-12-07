@@ -1,74 +1,83 @@
 import os
 import re
 import datetime
-from typing import List, Dict
+from typing import List, Tuple
 import html
 
 class ReportGenerator:
-    def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots", run_start_time: datetime.datetime = None):
+    def __init__(self, log_directory: str = "log", artifact_directory: str = "artifacts", run_start_time: datetime.datetime = None):
         self.log_directory = log_directory
-        self.screenshot_directory = screenshot_directory
+        self.artifact_directory = artifact_directory
         self.run_start_time = run_start_time
 
         # Data structures for aggregated results
-        self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
-        self.fuzzed_dropdowns_details = [] # (dropdown_name, option, url)
-        self.errors = []                   # (timestamp, level, message, url)
+        self.fuzzed_fields_details: List[Tuple[str, str, str]] = []    # (field_name, payload, url)
+        self.fuzzed_dropdowns_details: List[Tuple[str, str, str]] = [] # (dropdown_name, option, url)
+        self.errors: List[Tuple[str, str, str, str]] = []             # (timestamp, level, message, url)
 
-        self.js_errors = []    # (timestamp, message, url)
-        self.js_warnings = []  # (timestamp, message, url)
-        self.visited_urls = [] # URLs accessed by Selenium
-        self.fuzzer_actions = [] # Actions performed by Selenium fuzzer
-        self.screenshots = []
+        self.js_errors: List[Tuple[str, str, str]] = []    # (timestamp, message, url)
+        self.js_warnings: List[Tuple[str, str, str]] = []  # (timestamp, message, url)
+        self.visited_urls: List[str] = []                  # URLs accessed by Selenium
+        self.fuzzer_actions: List[str] = []                # Actions performed by Selenium fuzzer
 
-        # New artifact collections
-        self.artifacts_dir = "artifacts"
-        self.console_logs = []    # list of console log files
-        self.dom_snapshots = []   # list of dom snapshot files
-        self.artifact_screenshots = [] # Additional screenshots stored in artifacts directory
+        # Artifact collections
+        self.screenshots: List[str] = []
+        self.console_logs: List[str] = []    # List of console log files
+        self.dom_snapshots: List[str] = []   # List of DOM snapshot files
+        self.artifact_screenshots: List[str] = [] # Additional screenshots stored in artifacts directory
 
     def parse_logs(self):
         if not os.path.exists(self.log_directory):
-            print(f"Log directory {self.log_directory} not found.")
+            print(f"Log directory '{self.log_directory}' not found.")
             return
 
         # Match logs starting with js_change_detector_, fuzzing_log_, or selenium_fuzzer_ and ending in .log
-        log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log") and (
-            f.startswith("fuzzing_log_") or
-            f.startswith("js_change_detector_") or
-            f.startswith("selenium_fuzzer_")
-        )]
+        log_files = [
+            f for f in os.listdir(self.log_directory)
+            if f.endswith(".log") and (
+                f.startswith("fuzzing_log_") or
+                f.startswith("js_change_detector_") or
+                f.startswith("selenium_fuzzer_")
+            )
+        ]
 
         if not log_files:
             print("No matching log files found in the log directory.")
             return
 
         # Sort logs by modification time (oldest first)
-        log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)))
+        log_files.sort(key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)))
 
         # If run_start_time is provided, filter logs modified after run_start_time
         if self.run_start_time:
             run_start_timestamp = self.run_start_time.timestamp()
-            log_files = [f for f in log_files if os.path.getmtime(os.path.join(self.log_directory, f)) >= run_start_timestamp]
+            log_files = [
+                f for f in log_files
+                if os.path.getmtime(os.path.join(self.log_directory, f)) >= run_start_timestamp
+            ]
 
         if not log_files:
             print("No new log files found for this run (no logs modified after run_start_time).")
             return
 
-        # Regex patterns for fuzzing logs
+        # Updated Regex patterns for fuzzing logs
         field_fuzz_pattern = re.compile(
-            r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
+            r".*Payload '(.*?)' successfully entered into field '(.*?)'\. URL: (.*?)$"
         )
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
         fuzz_error_pattern = re.compile(
-            r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?)(?: at URL: (.*))?$"
+            r"\[(.*?)\] .* - (ERROR|CRITICAL) - (.*?)(?:\. URL: (.*))?$"
         )
 
         # JS logs patterns
-        js_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*ERROR - JavaScript Error from DevTools: (.*?) - (.*)")
-        js_warning_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*WARNING - JavaScript Warning from DevTools: (.*?) (.*)")
+        js_error_pattern = re.compile(
+            r".*\[(.*?)\] .* - ERROR - JavaScript Error from DevTools: (.*?) - (.*)"
+        )
+        js_warning_pattern = re.compile(
+            r".*\[(.*?)\] .* - WARNING - JavaScript Warning from DevTools: (.*?) (.*)"
+        )
 
         # Selenium fuzzer logs patterns
         accessed_url_pattern = re.compile(r".*Accessing the target URL:\s*(.*?)$")
@@ -86,12 +95,10 @@ class ReportGenerator:
                         if ff_match:
                             payload = ff_match.group(1)
                             field_name = ff_match.group(2)
-                            iframe_info = ff_match.group(3)
-                            url = ff_match.group(4)
+                            url = ff_match.group(3)
                             self.fuzzed_fields_details.append((
                                 html.escape(field_name),
                                 html.escape(payload),
-                                html.escape(iframe_info),
                                 html.escape(url)
                             ))
 
@@ -110,10 +117,10 @@ class ReportGenerator:
                         # Errors
                         fe_match = fuzz_error_pattern.search(line)
                         if fe_match:
-                            timestamp = fe_match.group(2)
-                            error_level = fe_match.group(3)
-                            error_message = fe_match.group(4)
-                            url = fe_match.group(5) if fe_match.group(5) else "N/A"
+                            timestamp = fe_match.group(1)
+                            error_level = fe_match.group(2)
+                            error_message = fe_match.group(3)
+                            url = fe_match.group(4) if fe_match.group(4) else "N/A"
                             self.errors.append((
                                 html.escape(timestamp),
                                 html.escape(error_level),
@@ -125,9 +132,9 @@ class ReportGenerator:
                         # JS Errors
                         je_match = js_error_pattern.search(line)
                         if je_match:
-                            timestamp = je_match.group(2)
-                            url = je_match.group(3)
-                            message = je_match.group(4)
+                            timestamp = je_match.group(1)
+                            url = je_match.group(2)
+                            message = je_match.group(3)
                             self.js_errors.append((
                                 html.escape(timestamp),
                                 html.escape(message),
@@ -137,9 +144,9 @@ class ReportGenerator:
                         # JS Warnings
                         jw_match = js_warning_pattern.search(line)
                         if jw_match:
-                            timestamp = jw_match.group(2)
-                            url = jw_match.group(3)
-                            message = jw_match.group(4)
+                            timestamp = jw_match.group(1)
+                            url = jw_match.group(2)
+                            message = jw_match.group(3)
                             self.js_warnings.append((
                                 html.escape(timestamp),
                                 html.escape(message),
@@ -159,21 +166,15 @@ class ReportGenerator:
                             action_desc = act_match.group(1)
                             self.fuzzer_actions.append(html.escape(action_desc))
 
-    def find_screenshots(self):
-        # Existing screenshot logic
-        if os.path.exists(self.screenshot_directory):
-            self.screenshots = [f for f in os.listdir(self.screenshot_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
-
-        # Also scan for additional artifacts in `artifacts` directory
-        self.console_logs = []
-        self.dom_snapshots = []
-        self.artifact_screenshots = []
-        artifacts_dir = "artifacts"
-        if os.path.exists(artifacts_dir):
-            for f in os.listdir(artifacts_dir):
-                fp = os.path.join(artifacts_dir, f)
+    def find_artifacts(self, artifact_directory: str):
+        # Screenshots
+        if os.path.exists(artifact_directory):
+            for f in os.listdir(artifact_directory):
+                fp = os.path.join(artifact_directory, f)
                 if os.path.isfile(fp):
-                    if f.lower().endswith(".log"):
+                    if f.lower().endswith((".png", ".jpg", ".jpeg")):
+                        self.screenshots.append(f)
+                    elif f.lower().endswith(".log"):
                         self.console_logs.append(f)
                     elif f.lower().endswith(".html"):
                         self.dom_snapshots.append(f)
@@ -230,9 +231,9 @@ class ReportGenerator:
         html_content.append("<h2>💻 Fuzzed Input Fields (Aggregated)</h2>")
         if self.fuzzed_fields_details:
             html_content.append("<table>")
-            html_content.append("<tr><th>Field Name</th><th>Payload</th><th>Iframe</th><th>URL</th></tr>")
-            for field_name, payload, iframe, url in self.fuzzed_fields_details:
-                html_content.append(f"<tr><td>{field_name}</td><td>{payload}</td><td>{iframe}</td><td><a href='{url}' target='_blank'>{url}</a></td></tr>")
+            html_content.append("<tr><th>Field Name</th><th>Payload</th><th>URL</th></tr>")
+            for field_name, payload, url in self.fuzzed_fields_details:
+                html_content.append(f"<tr><td>{field_name}</td><td>{payload}</td><td><a href='{url}' target='_blank'>{url}</a></td></tr>")
             html_content.append("</table>")
         else:
             html_content.append("<p class='no-data'>No input fields were fuzzed across all logs.</p>")
@@ -320,7 +321,7 @@ class ReportGenerator:
         html_content.append("<h2>📷 Screenshots</h2>")
         if self.screenshots:
             for screenshot in self.screenshots:
-                screenshot_path = os.path.join(self.screenshot_directory, screenshot)
+                screenshot_path = os.path.join(self.artifact_directory, screenshot)
                 html_content.append(f"<div class='screenshot'><img src='{html.escape(screenshot_path)}' alt='{html.escape(screenshot)}' style='max-width:100%;'/><br><small>{html.escape(screenshot)}</small></div>")
         else:
             html_content.append("<p class='no-data'>No screenshots found.</p>")
@@ -330,7 +331,6 @@ class ReportGenerator:
         html_content.append("<div class='section' id='artifacts'>")
         html_content.append("<h2>🗂️ Additional Artifacts</h2>")
 
-        artifacts_dir = "artifacts"
         if not (self.console_logs or self.dom_snapshots or self.artifact_screenshots):
             html_content.append("<p class='no-data'>No additional artifacts found.</p>")
         else:
@@ -339,7 +339,7 @@ class ReportGenerator:
                 html_content.append("<h3>Console Logs</h3>")
                 html_content.append("<ul>")
                 for c_log in self.console_logs:
-                    artifact_path = os.path.join(artifacts_dir, c_log)
+                    artifact_path = os.path.join(self.artifact_directory, c_log)
                     html_content.append(f"<li><a href='{artifact_path}' target='_blank'>{c_log}</a></li>")
                 html_content.append("</ul>")
 
@@ -348,7 +348,7 @@ class ReportGenerator:
                 html_content.append("<h3>DOM Snapshots</h3>")
                 html_content.append("<ul>")
                 for dom_file in self.dom_snapshots:
-                    artifact_path = os.path.join(artifacts_dir, dom_file)
+                    artifact_path = os.path.join(self.artifact_directory, dom_file)
                     html_content.append(f"<li><a href='{artifact_path}' target='_blank'>{dom_file}</a></li>")
                 html_content.append("</ul>")
 
@@ -356,7 +356,7 @@ class ReportGenerator:
             if self.artifact_screenshots:
                 html_content.append("<h3>Artifact Screenshots</h3>")
                 for ss in self.artifact_screenshots:
-                    artifact_path = os.path.join(artifacts_dir, ss)
+                    artifact_path = os.path.join(self.artifact_directory, ss)
                     html_content.append(f"<div class='screenshot'><img src='{html.escape(artifact_path)}' alt='{html.escape(ss)}' style='max-width:100%;'/><br><small>{html.escape(ss)}</small></div>")
 
         html_content.append("</div>")  # artifacts section
