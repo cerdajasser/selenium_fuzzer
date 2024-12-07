@@ -31,6 +31,17 @@ class Config:
     # Timeout for Explicit Waits (in seconds)
     EXPLICIT_WAIT_TIMEOUT = int(os.getenv('EXPLICIT_WAIT_TIMEOUT', 10))  # Default wait time for Selenium explicit waits
 
+    # Aggregation/Reporting Configuration (Optional):
+    # For example, you may want to limit how many days of logs to aggregate, or specify log file patterns here.
+    # If not set, these remain defaults that reporter.py uses directly.
+    AGGREGATE_LOG_FILE_PATTERNS = [
+        "fuzzing_log_",
+        "js_change_detector_",
+        "selenium_fuzzer_"
+    ]
+    # Potentially define a time window in days to consider logs for aggregation:
+    AGGREGATION_TIME_WINDOW_DAYS = int(os.getenv('AGGREGATION_TIME_WINDOW_DAYS', 0))  # 0 means no limit
+
     @classmethod
     def get_log_file_path(cls):
         """Get the path for the log file, ensuring the folder is created."""

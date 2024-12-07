@@ -8,9 +8,21 @@ class ReportGenerator:
     def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots"):
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
+
+        # Existing data
         self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
         self.fuzzed_dropdowns_details = [] # (dropdown_name, option, url)
         self.errors = []                   # (timestamp, error_level, error_message, url)
+
+        # New data for js_change_detector logs
+        self.js_errors = []    # (timestamp, message, url)
+        self.js_warnings = []  # (timestamp, message, url)
+        self.js_logs = []      # For informational JS logs if needed
+
+        # New data for selenium_fuzzer logs
+        self.visited_urls = []    # URLs accessed by Selenium
+        self.fuzzer_actions = []  # Actions like "Checking Dropdown Menus", "Starting the Fuzzer", etc.
+
         self.screenshots = []
 
     def parse_logs(self):
@@ -18,74 +30,133 @@ class ReportGenerator:
             print(f"Log directory {self.log_directory} not found.")
             return
 
-        # Only consider files that start with "fuzzing_log_" and end with ".log"
-        log_files = [f for f in os.listdir(self.log_directory) if f.startswith("fuzzing_log_") and f.endswith(".log")]
+        # Match logs starting with js_change_detector_, fuzzing_log_, or selenium_fuzzer_, ending in .log
+        log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log") and (
+            f.startswith("fuzzing_log_") or
+            f.startswith("js_change_detector_") or
+            f.startswith("selenium_fuzzer_")
+        )]
+
         if not log_files:
             print("No matching log files found in the log directory.")
             return
 
-        # Sort by modification time (newest first)
-        log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)), reverse=True)
-        latest_log_file = log_files[0]
-        print(f"Parsing latest log file: {latest_log_file}")
+        # Sort by modification time
+        log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)))
 
-        # Regex patterns based on the logs you provided:
+        # Regex patterns for fuzzing logs (fields, dropdowns, errors)
         field_fuzz_pattern = re.compile(
             r".*Payload '(.*?)' successfully entered into field '(.*?)' in iframe (.*?)\. URL: (.*?)$"
         )
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
-        error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
+        fuzz_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?) at URL: (.*?)$")
 
-        with open(os.path.join(self.log_directory, latest_log_file), 'r', encoding='utf-8') as lf:
-            for line in lf:
-                # Fields
-                ff_match = field_fuzz_pattern.search(line)
-                if ff_match:
-                    payload = ff_match.group(1)
-                    field_name = ff_match.group(2)
-                    iframe_info = ff_match.group(3)
-                    url = ff_match.group(4)
-                    # Escape values to prevent XSS
-                    self.fuzzed_fields_details.append((
-                        html.escape(field_name),
-                        html.escape(payload),
-                        html.escape(iframe_info),
-                        html.escape(url)
-                    ))
+        # Regex patterns for js_change_detector logs
+        # Example of error line:
+        # ERROR - JavaScript Error from DevTools: http://localhost:8000/api/state?key=inputtypes.com - Failed to load resource...
+        js_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*ERROR - JavaScript Error from DevTools: (.*?) - (.*)")
+        # Example warning line:
+        # WARNING - JavaScript Warning from DevTools: http://localhost:8000/inputtypes.com/js/index.js 6169 The specified value ""
+        js_warning_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*WARNING - JavaScript Warning from DevTools: (.*?) (.*)")
 
-                # Dropdowns
-                do_match = dropdown_option_pattern.search(line)
-                if do_match:
-                    option = do_match.group(1)
-                    dropdown_name = do_match.group(2)
-                    url = do_match.group(3)
-                    # Escape to prevent XSS
-                    self.fuzzed_dropdowns_details.append((
-                        html.escape(dropdown_name),
-                        html.escape(option),
-                        html.escape(url)
-                    ))
+        # Regex patterns for selenium_fuzzer logs
+        # Accessed URL line:
+        # >>> Accessing the target URL: http://localhost:8000/inputtypes.com/index.html
+        accessed_url_pattern = re.compile(r".*Accessing the target URL:\s*(.*?)$")
+        # Actions like checking dropdowns:
+        # === Checking Dropdown Menus on the Page ===
+        action_pattern = re.compile(r".*=== (.*?) ===")
 
-                # Errors
-                e_match = error_pattern.search(line)
-                if e_match:
-                    timestamp = e_match.group(2)
-                    error_level = e_match.group(3)
-                    error_message = e_match.group(4)
-                    url = e_match.group(5)
-                    # Escape these values as well
-                    self.errors.append((
-                        html.escape(timestamp),
-                        html.escape(error_level),
-                        html.escape(error_message),
-                        html.escape(url)
-                    ))
+        for log_file in log_files:
+            log_path = os.path.join(self.log_directory, log_file)
+            print(f"Parsing log file: {log_file}")
+            with open(log_path, 'r', encoding='utf-8') as lf:
+                for line in lf:
+                    # Check file type:
+                    if log_file.startswith("fuzzing_log_"):
+                        # Fields
+                        ff_match = field_fuzz_pattern.search(line)
+                        if ff_match:
+                            payload = ff_match.group(1)
+                            field_name = ff_match.group(2)
+                            iframe_info = ff_match.group(3)
+                            url = ff_match.group(4)
+                            self.fuzzed_fields_details.append((
+                                html.escape(field_name),
+                                html.escape(payload),
+                                html.escape(iframe_info),
+                                html.escape(url)
+                            ))
+
+                        # Dropdowns
+                        do_match = dropdown_option_pattern.search(line)
+                        if do_match:
+                            option = do_match.group(1)
+                            dropdown_name = do_match.group(2)
+                            url = do_match.group(3)
+                            self.fuzzed_dropdowns_details.append((
+                                html.escape(dropdown_name),
+                                html.escape(option),
+                                html.escape(url)
+                            ))
+
+                        # Errors
+                        fe_match = fuzz_error_pattern.search(line)
+                        if fe_match:
+                            timestamp = fe_match.group(2)
+                            error_level = fe_match.group(3)
+                            error_message = fe_match.group(4)
+                            url = fe_match.group(5)
+                            self.errors.append((
+                                html.escape(timestamp),
+                                html.escape(error_level),
+                                html.escape(error_message),
+                                html.escape(url)
+                            ))
+
+                    elif log_file.startswith("js_change_detector_"):
+                        # JS Errors
+                        je_match = js_error_pattern.search(line)
+                        if je_match:
+                            timestamp = je_match.group(2)
+                            url = je_match.group(3)
+                            message = je_match.group(4)
+                            self.js_errors.append((
+                                html.escape(timestamp),
+                                html.escape(message),
+                                html.escape(url)
+                            ))
+
+                        # JS Warnings
+                        jw_match = js_warning_pattern.search(line)
+                        if jw_match:
+                            timestamp = jw_match.group(2)
+                            url = jw_match.group(3)
+                            message = jw_match.group(4)
+                            self.js_warnings.append((
+                                html.escape(timestamp),
+                                html.escape(message),
+                                html.escape(url)
+                            ))
+
+                    elif log_file.startswith("selenium_fuzzer_"):
+                        # Accessed URLs
+                        au_match = accessed_url_pattern.search(line)
+                        if au_match:
+                            accessed_url = au_match.group(1)
+                            self.visited_urls.append(html.escape(accessed_url))
+
+                        # Actions
+                        act_match = action_pattern.search(line)
+                        if act_match:
+                            action_desc = act_match.group(1)
+                            self.fuzzer_actions.append(html.escape(action_desc))
 
     def find_screenshots(self):
-        if os.path.exists(self.screenshot_directory):
-            self.screenshots = [f for f in os.listdir(self.screenshot_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+        if os.path.exists(self.screenshots_directory):
+            self.screenshots = [f for f in os.listdir(self.screenshots_directory) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
 
     def generate_report(self, output_file: str = "report.html"):
         html_content = [
@@ -124,6 +195,9 @@ class ReportGenerator:
             "<a href='#fields'>💻 Fields</a>",
             "<a href='#dropdowns'>🔽 Dropdowns</a>",
             "<a href='#errors'>❌ Errors</a>",
+            "<a href='#jserrors'>🛠️ JS Errors</a>",
+            "<a href='#jswarnings'>⚠️ JS Warnings</a>",
+            "<a href='#fuzzeractions'>🎬 Fuzzer Actions</a>",
             "<a href='#screenshots'>📷 Screenshots</a>",
             "</nav>",
             "<div class='container'>"
@@ -131,7 +205,7 @@ class ReportGenerator:
 
         # Fields Fuzzed
         html_content.append("<div class='section' id='fields'>")
-        html_content.append("<h2>💻 Fuzzed Input Fields</h2>")
+        html_content.append("<h2>💻 Fuzzed Input Fields (Aggregated)</h2>")
         if self.fuzzed_fields_details:
             html_content.append("<table>")
             html_content.append("<tr><th>Field Name</th><th>Payload</th><th>Iframe</th><th>URL</th></tr>")
@@ -139,12 +213,12 @@ class ReportGenerator:
                 html_content.append(f"<tr><td>{field_name}</td><td>{payload}</td><td>{iframe}</td><td><a href='{url}' target='_blank'>{url}</a></td></tr>")
             html_content.append("</table>")
         else:
-            html_content.append("<p class='no-data'>No input fields were fuzzed.</p>")
+            html_content.append("<p class='no-data'>No input fields were fuzzed across all logs.</p>")
         html_content.append("</div>")
 
         # Dropdowns Checked
         html_content.append("<div class='section' id='dropdowns'>")
-        html_content.append("<h2>🔽 Checked Dropdowns</h2>")
+        html_content.append("<h2>🔽 Checked Dropdowns (Aggregated)</h2>")
         if self.fuzzed_dropdowns_details:
             html_content.append("<table>")
             html_content.append("<tr><th>Dropdown Name</th><th>Option Selected</th><th>URL</th></tr>")
@@ -152,12 +226,12 @@ class ReportGenerator:
                 html_content.append(f"<tr><td>{dropdown_name}</td><td>{option}</td><td><a href='{url}' target='_blank'>{url}</a></td></tr>")
             html_content.append("</table>")
         else:
-            html_content.append("<p class='no-data'>No dropdown interactions were recorded.</p>")
+            html_content.append("<p class='no-data'>No dropdown interactions recorded across all logs.</p>")
         html_content.append("</div>")
 
         # Major Errors
         html_content.append("<div class='section' id='errors'>")
-        html_content.append("<h2>❌ Major Errors</h2>")
+        html_content.append("<h2>❌ Major Errors (Aggregated)</h2>")
         if self.errors:
             html_content.append("<table>")
             html_content.append("<tr><th>Timestamp</th><th>Level</th><th>Message</th><th>URL</th></tr>")
@@ -165,7 +239,58 @@ class ReportGenerator:
                 html_content.append(f"<tr><td>{timestamp}</td><td class='error'>{level}</td><td>{message}</td><td><a href='{url}' target='_blank'>{url}</a></td></tr>")
             html_content.append("</table>")
         else:
-            html_content.append("<p class='no-data'>No major errors recorded.</p>")
+            html_content.append("<p class='no-data'>No major errors recorded across all logs.</p>")
+        html_content.append("</div>")
+
+        # JS Errors
+        html_content.append("<div class='section' id='jserrors'>")
+        html_content.append("<h2>🛠️ JS Errors from DevTools</h2>")
+        if self.js_errors:
+            html_content.append("<table>")
+            html_content.append("<tr><th>Timestamp</th><th>URL</th><th>Message</th></tr>")
+            for timestamp, message, url in self.js_errors:
+                html_content.append(f"<tr><td>{timestamp}</td><td><a href='{url}' target='_blank'>{url}</a></td><td>{message}</td></tr>")
+            html_content.append("</table>")
+        else:
+            html_content.append("<p class='no-data'>No JS errors found.</p>")
+        html_content.append("</div>")
+
+        # JS Warnings
+        html_content.append("<div class='section' id='jswarnings'>")
+        html_content.append("<h2>⚠️ JS Warnings from DevTools</h2>")
+        if self.js_warnings:
+            html_content.append("<table>")
+            html_content.append("<tr><th>Timestamp</th><th>URL</th><th>Message</th></tr>")
+            for timestamp, message, url in self.js_warnings:
+                html_content.append(f"<tr><td>{timestamp}</td><td><a href='{url}' target='_blank'>{url}</a></td><td>{message}</td></tr>")
+            html_content.append("</table>")
+        else:
+            html_content.append("<p class='no-data'>No JS warnings found.</p>")
+        html_content.append("</div>")
+
+        # Selenium Fuzzer Actions
+        html_content.append("<div class='section' id='fuzzeractions'>")
+        html_content.append("<h2>🎬 Selenium Fuzzer Actions & Visited URLs</h2>")
+
+        # Actions
+        html_content.append("<h3>Actions</h3>")
+        if self.fuzzer_actions:
+            html_content.append("<ul>")
+            for action in self.fuzzer_actions:
+                html_content.append(f"<li>{action}</li>")
+            html_content.append("</ul>")
+        else:
+            html_content.append("<p class='no-data'>No recorded actions from Selenium Fuzzer logs.</p>")
+
+        # Visited URLs
+        html_content.append("<h3>Visited URLs</h3>")
+        if self.visited_urls:
+            html_content.append("<ul>")
+            for vurl in self.visited_urls:
+                html_content.append(f"<li><a href='{vurl}' target='_blank'>{vurl}</a></li>")
+            html_content.append("</ul>")
+        else:
+            html_content.append("<p class='no-data'>No visited URLs recorded.</p>")
         html_content.append("</div>")
 
         # Screenshots
