@@ -5,9 +5,10 @@ from typing import List, Dict
 import html
 
 class ReportGenerator:
-    def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots"):
+    def __init__(self, log_directory: str = "log", screenshot_directory: str = "screenshots", run_start_time: datetime.datetime = None):
         self.log_directory = log_directory
         self.screenshot_directory = screenshot_directory
+        self.run_start_time = run_start_time
 
         # Data structures for aggregated results
         self.fuzzed_fields_details = []    # (field_name, payload, iframe, url)
@@ -16,7 +17,6 @@ class ReportGenerator:
 
         self.js_errors = []    # (timestamp, message, url)
         self.js_warnings = []  # (timestamp, message, url)
-
         self.visited_urls = []    # URLs accessed by Selenium
         self.fuzzer_actions = []  # Actions performed by Selenium fuzzer
         self.screenshots = []
@@ -26,7 +26,7 @@ class ReportGenerator:
             print(f"Log directory {self.log_directory} not found.")
             return
 
-        # Match logs starting with js_change_detector_, fuzzing_log_, or selenium_fuzzer_, ending in .log
+        # Match logs starting with js_change_detector_, fuzzing_log_, or selenium_fuzzer_ and ending in .log
         log_files = [f for f in os.listdir(self.log_directory) if f.endswith(".log") and (
             f.startswith("fuzzing_log_") or
             f.startswith("js_change_detector_") or
@@ -37,7 +37,17 @@ class ReportGenerator:
             print("No matching log files found in the log directory.")
             return
 
+        # Sort logs by modification time (oldest first)
         log_files = sorted(log_files, key=lambda x: os.path.getmtime(os.path.join(self.log_directory, x)))
+
+        # If run_start_time is provided, filter logs modified after run_start_time
+        if self.run_start_time:
+            run_start_timestamp = self.run_start_time.timestamp()
+            log_files = [f for f in log_files if os.path.getmtime(os.path.join(self.log_directory, f)) >= run_start_timestamp]
+
+        if not log_files:
+            print("No new log files found for this run (no logs modified after run_start_time).")
+            return
 
         # Regex patterns for fuzzing logs
         field_fuzz_pattern = re.compile(
@@ -46,24 +56,19 @@ class ReportGenerator:
         dropdown_option_pattern = re.compile(
             r".*Selected option '(.*?)' from dropdown '(.*?)' at URL: (.*?)$"
         )
-        # Updated error pattern to make 'at URL:' optional
-        # Groups:
-        # 2: timestamp
-        # 3: error level (ERROR or CRITICAL)
-        # 4: error message
-        # 5: URL (optional)
         fuzz_error_pattern = re.compile(
             r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),.*(ERROR|CRITICAL).*?: (.*?)(?: at URL: (.*))?$"
         )
 
-        # Regex patterns for js_change_detector logs
+        # JS logs patterns
         js_error_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*ERROR - JavaScript Error from DevTools: (.*?) - (.*)")
         js_warning_pattern = re.compile(r"(.*)(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*WARNING - JavaScript Warning from DevTools: (.*?) (.*)")
 
-        # Regex for selenium_fuzzer logs
+        # Selenium fuzzer logs patterns
         accessed_url_pattern = re.compile(r".*Accessing the target URL:\s*(.*?)$")
         action_pattern = re.compile(r".*=== (.*?) ===")
 
+        # Parse each selected log file
         for log_file in log_files:
             log_path = os.path.join(self.log_directory, log_file)
             print(f"Parsing log file: {log_file}")
@@ -115,8 +120,6 @@ class ReportGenerator:
                         je_match = js_error_pattern.search(line)
                         if je_match:
                             timestamp = je_match.group(2)
-                            # In the js_error_pattern, group(3) is URL and group(4) is message or vice versa?
-                            # Pattern: ...Error from DevTools: (URL) - (MESSAGE)
                             url = je_match.group(3)
                             message = je_match.group(4)
                             self.js_errors.append((
@@ -129,7 +132,6 @@ class ReportGenerator:
                         jw_match = js_warning_pattern.search(line)
                         if jw_match:
                             timestamp = jw_match.group(2)
-                            # Pattern: ...Warning from DevTools: (URL) (MESSAGE)
                             url = jw_match.group(3)
                             message = jw_match.group(4)
                             self.js_warnings.append((

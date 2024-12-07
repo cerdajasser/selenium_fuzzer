@@ -38,10 +38,13 @@ def main():
     parser.add_argument("--delay", type=int, default=1, help="Delay between fuzzing attempts in seconds.")
     parser.add_argument("--fuzz-fields", action="store_true", help="Fuzz input fields on the page.")
     parser.add_argument("--check-dropdowns", action="store_true", help="Check dropdown menus on the page.")
-    parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol for capturing JavaScript and network activity.")
+    parser.add_argument("--devtools", action="store_true", help="Enable Chrome DevTools Protocol to capture JavaScript and network activity.")
     parser.add_argument("--track-state", action="store_true", help="Track the state of the webpage before and after fuzzing.")
     parser.add_argument("--aggregate-only", action="store_true", help="Generate an aggregated report from existing logs without running fuzzing.")
     args = parser.parse_args()
+
+    # Record the start time of the run
+    run_start_time = datetime.now()
 
     # If we're only aggregating logs, we skip fuzzing and just produce the report.
     if not args.aggregate_only:
@@ -119,14 +122,17 @@ def main():
                     logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
 
         except (WebDriverException, TimeoutException) as e:
-            logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
+            if 'logger' in locals():
+                logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
         except Exception as e:
-            logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
+            if 'logger' in locals():
+                logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
         finally:
             if driver:
                 driver.quit()
                 print("\nClosed the browser and exited gracefully.")
-                logger.info("\n>>> Closed the browser and exited gracefully.\n")
+                if 'logger' in locals():
+                    logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
     # After fuzzing is completed or if we ran in aggregate-only mode, generate the report
     reports_dir = "reports"
@@ -140,14 +146,13 @@ def main():
     report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
     report_path = os.path.join(reports_dir, report_filename)
 
-    reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots")
-    reporter.parse_logs()   # Aggregates logs from all matching files
+    # Pass run_start_time to ReportGenerator to filter logs
+    reporter = ReportGenerator(log_directory="log", screenshot_directory="screenshots", run_start_time=run_start_time)
+    reporter.parse_logs()
     reporter.find_screenshots()
     reporter.generate_report(report_path)
 
     print(f"\nReport generated at: {report_path}")
-    # If we had a logger from the fuzzing portion, we can log this. If in aggregate-only mode, logger won't exist.
-    # We can do a safe check:
     if 'logger' in locals():
         logger.info(f"Report generated at: {report_path}")
 
