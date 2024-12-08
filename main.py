@@ -1,9 +1,12 @@
+# main.py
+
 import logging
 import argparse
 import os
 import time
 from urllib.parse import urlparse
-from datetime import datetime
+from datetime import datetime  # Added import
+import sys  # Added import
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium_fuzzer.utils import generate_safe_payloads
 from selenium_fuzzer.config import Config
@@ -185,7 +188,7 @@ def main():
         logger.info("Environment Info: " + env_info)
         driver = None
         last_action = "Initialization"
-        last_element = "N/A"
+        last_element = "N/A"  # Initialize with default value
         try:
             headless = args.headless or Config.SELENIUM_HEADLESS
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
