@@ -14,19 +14,18 @@ from selenium_fuzzer.reporter import ReportGenerator
 import platform
 
 def setup_logger(url):
-    parsed_url = os.path.basename(url)
-    domain = parsed_url.replace(":", "_").replace(".", "_")
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.replace(":", "_").replace(".", "_")
     log_filename = os.path.join(Config.LOG_FOLDER, f"selenium_fuzzer_{domain}_{time.strftime('%Y%m%d_%H%M%S')}.log")
 
     logger = logging.getLogger(f"selenium_fuzzer_{domain}")
     logger.setLevel(logging.DEBUG)
 
-    file_handler = logging.FileHandler(log_filename)
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-
-    if not any(isinstance(handler, logging.FileHandler) for handler in logger.handlers):
+    if not logger.handlers:
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
     return logger
@@ -34,9 +33,8 @@ def setup_logger(url):
 def capture_artifacts_on_error(driver, run_id, scenario, last_action, last_element):
     """Capture artifacts (screenshots, console logs, DOM snapshot) on error."""
     timestamp_str = time.strftime('%Y%m%d_%H%M%S')
-    artifacts_dir = "artifacts"
-    if not os.path.exists(artifacts_dir):
-        os.makedirs(artifacts_dir)
+    artifacts_dir = Config.ARTIFACTS_FOLDER
+    os.makedirs(artifacts_dir, exist_ok=True)
 
     # Screenshot
     screenshot_path = os.path.join(artifacts_dir, f"error_screenshot_{run_id}_{timestamp_str}.png")
@@ -51,7 +49,6 @@ def capture_artifacts_on_error(driver, run_id, scenario, last_action, last_eleme
             for entry in logs:
                 f.write(f"{entry['timestamp']} {entry['level']} {entry['message']}\n")
     except Exception as e:
-        # If we can't get console logs, log that fact
         with open(console_logs_path, 'w', encoding='utf-8') as f:
             f.write("No console logs available.\n")
 
@@ -65,9 +62,102 @@ def capture_artifacts_on_error(driver, run_id, scenario, last_action, last_eleme
     print(f"📜 Saved console logs: {console_logs_path}")
     print(f"📄 Saved DOM snapshot: {dom_path}")
 
-    # Store references somewhere accessible; reporter.py can later scan this directory and link artifacts.
-    # We could log these paths with the logger as well.
     logging.getLogger().info(f"Artifacts saved: screenshot={screenshot_path}, console={console_logs_path}, dom={dom_path}")
+
+def initialize_fuzzer(driver, args, logger):
+    """Initialize and run the fuzzer based on provided arguments."""
+    try:
+        js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
+        fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
+
+        # Fuzz input fields if requested
+        if args.fuzz_fields:
+            logger.info("\n=== Detecting Input Fields on the Page ===\n")
+            try:
+                last_action = "Detecting Input Fields"
+                input_fields = fuzzer.detect_inputs()
+                if not input_fields:
+                    logger.warning("\n!!! No input fields detected on the page.\n")
+                else:
+                    print(f"✅  Found {len(input_fields)} suitable input element(s):")
+                    print("   ────────────────────────────────────────────────")
+                    for idx, (iframe_idx, field) in enumerate(input_fields):
+                        field_type = field.get_attribute("type") or "unknown"
+                        field_name = field.get_attribute("name") or "Unnamed"
+                        print(f"   [{idx}] 📄 Name: {field_name}")
+                        print(f"      🏷️ Type: {field_type}")
+
+                    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                    selected_indices = input("\nPlease enter the indices of the fields to fuzz (comma-separated): ")
+                    selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
+
+                    payloads = generate_safe_payloads()
+                    for idx in selected_indices:
+                        if 0 <= idx < len(input_fields):
+                            last_action = f"Fuzzing field at index {idx}"
+                            last_element = input_fields[idx][1].get_attribute('name') or 'Unnamed'
+                            fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
+                            logger.info(f"Fuzzed field: {last_element}")
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
+                capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
+
+        # Check dropdown menus if requested
+        if args.check_dropdowns:
+            logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
+            try:
+                last_action = "Fuzzing Dropdowns"
+                fuzzer.fuzz_dropdowns(delay=args.delay)
+            except Exception as e:
+                logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
+                capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
+
+        # Handle iframes
+        try:
+            last_action = "Handling Iframes"
+            fuzzer.handle_iframes()
+            logger.info("Handled iframes successfully.")
+        except Exception as e:
+            logger.error(f"\n!!! Error handling iframes: {e}\n")
+            capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
+
+        # Track state if requested
+        if args.track_state or Config.TRACK_STATE:
+            last_action = "Tracking State"
+            state_before, state_after = fuzzer.track_state()
+            if state_before and state_after:
+                snapshot_before = fuzzer.save_artifact(state_before, f'dom_snapshot_before_{args.run_id}.html')
+                snapshot_after = fuzzer.save_artifact(state_after, f'dom_snapshot_after_{args.run_id}.html')
+                if snapshot_before:
+                    logger.info(f"Saved state before fuzzing: {snapshot_before}")
+                if snapshot_after:
+                    logger.info(f"Saved state after fuzzing: {snapshot_after}")
+    except Exception as e:
+        logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
+        capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
+
+def generate_final_report(args, run_start_time, logger):
+    """Generate the final report after fuzzing."""
+    try:
+        reports_dir = Config.REPORTS_FOLDER
+        os.makedirs(reports_dir, exist_ok=True)
+
+        parsed = urlparse(args.url)
+        domain = parsed.netloc or "report"
+        safe_domain = domain.replace(":", "_").replace(".", "_")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
+        report_path = os.path.join(reports_dir, report_filename)
+
+        reporter = ReportGenerator(log_directory=Config.LOG_FOLDER, artifact_directory=Config.ARTIFACTS_FOLDER, run_start_time=run_start_time)
+        reporter.parse_logs()
+        reporter.find_artifacts(Config.ARTIFACTS_FOLDER)
+        reporter.generate_report(report_path)
+
+        print(f"\nReport generated at: {report_path}")
+        logger.info(f"Report generated at: {report_path}")
+    except Exception as e:
+        logger.error(f"Error generating report: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run Selenium Fuzzer on a target URL.")
@@ -88,8 +178,6 @@ def main():
 
     # Basic environment info for logging
     system_info = f"OS: {platform.system()} {platform.release()}, Browser: Chrome/Unknown"
-    # Browser version retrieval would require devtools or capabilities check
-    # For demonstration, we just log headless mode and devtools:
     env_info = f"Headless: {args.headless}, DevTools: {args.devtools}, Scenario: {args.scenario}, Run ID: {args.run_id}, {system_info}"
 
     if not args.aggregate_only:
@@ -110,8 +198,6 @@ def main():
 
             driver = create_driver(headless=headless)
 
-            js_change_detector = JavaScriptChangeDetector(driver, enable_devtools=args.devtools or Config.ENABLE_DEVTOOLS)
-
             print("🛠️  DevTools successfully initialized for JavaScript and network monitoring.")
             print("ℹ️  JavaScript for console logging injected successfully.")
             print("🔍 JavaScript for DOM mutation monitoring injected successfully.\n")
@@ -124,62 +210,16 @@ def main():
             print("✨ Initializing Fuzzer...")
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-            fuzzer = Fuzzer(driver, js_change_detector, args.url, track_state=args.track_state or Config.TRACK_STATE)
-            last_action = "Initializing Fuzzer"
-
-            # Fuzz input fields if requested
-            if args.fuzz_fields:
-                print("\n📋 Detecting input fields on the page:")
-                print("   - Including hidden elements, dynamically loaded elements, and elements inside iframes...\n")
-                logger.info("\n=== Detecting Input Fields on the Page ===\n")
-                try:
-                    last_action = "Detecting Input Fields"
-                    input_fields = fuzzer.detect_inputs()
-                    if not input_fields:
-                        logger.warning("\n!!! No input fields detected on the page.\n")
-                    else:
-                        print(f"✅  Found {len(input_fields)} suitable input element(s):")
-                        print("   ────────────────────────────────────────────────")
-                        for idx, (iframe_idx, field) in enumerate(input_fields):
-                            field_type = field.get_attribute("type") or "unknown"
-                            field_name = field.get_attribute("name") or "Unnamed"
-                            print(f"   [{idx}] 📄 Name: {field_name}")
-                            print(f"      🏷️ Type: {field_type}")
-
-                        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                        selected_indices = input("\nPlease enter the indices of the fields to fuzz (comma-separated): ")
-                        selected_indices = [int(idx.strip()) for idx in selected_indices.split(",") if idx.strip().isdigit()]
-
-                        payloads = generate_safe_payloads()
-                        for idx in selected_indices:
-                            if 0 <= idx < len(input_fields):
-                                last_action = f"Fuzzing field at index {idx}"
-                                last_element = input_fields[idx][1].get_attribute('name') or 'Unnamed'
-                                fuzzer.fuzz_field(input_fields[idx], payloads, delay=args.delay)
-
-                except Exception as e:
-                    logger.error(f"\n!!! Unexpected Error during input fuzzing: {e}\n")
-                    capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
-
-            # Check dropdown menus if requested
-            if args.check_dropdowns:
-                print("\n📋 Checking dropdown menus on the page...")
-                logger.info("\n=== Checking Dropdown Menus on the Page ===\n")
-                try:
-                    last_action = "Fuzzing Dropdowns"
-                    fuzzer.fuzz_dropdowns(delay=args.delay)
-                except Exception as e:
-                    logger.error(f"\n!!! Unexpected Error during dropdown interaction: {e}\n")
-                    capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
+            initialize_fuzzer(driver, args, logger)
 
         except (WebDriverException, TimeoutException) as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! Critical WebDriver Error: {e}\n")
-            capture_artifacts_on_error(driver, args.run_id, args.scenario, "N/A", "N/A")
+            capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
         except Exception as e:
             if 'logger' in locals():
                 logger.error(f"\n!!! An Unexpected Error Occurred: {e}\n")
-            capture_artifacts_on_error(driver, args.run_id, args.scenario, "N/A", "N/A")
+            capture_artifacts_on_error(driver, args.run_id, args.scenario, last_action, last_element)
         finally:
             if driver:
                 driver.quit()
@@ -188,26 +228,7 @@ def main():
                     logger.info("\n>>> Closed the browser and exited gracefully.\n")
 
     # After fuzzing or if in aggregate-only mode, generate the report
-    reports_dir = "reports"
-    if not os.path.exists(reports_dir):
-        os.makedirs(reports_dir)
-
-    parsed = urlparse(args.url)
-    domain = parsed.netloc or "report"
-    safe_domain = domain.replace(":", "_").replace(".", "_")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_filename = f"fuzzer_report_{safe_domain}_{timestamp}.html"
-    report_path = os.path.join(reports_dir, report_filename)
-
-    # Initialize ReportGenerator with updated artifact_directory
-    reporter = ReportGenerator(log_directory="log", artifact_directory="artifacts", run_start_time=run_start_time)
-    reporter.parse_logs()
-    reporter.find_artifacts("artifacts")
-    reporter.generate_report(report_path)
-
-    print(f"\nReport generated at: {report_path}")
-    if 'logger' in locals():
-        logger.info(f"Report generated at: {report_path}")
+    generate_final_report(args, run_start_time, logger if 'logger' in locals() else logging)
 
 if __name__ == "__main__":
     main()
