@@ -1,7 +1,7 @@
 # tests/test_main.py
 
 import unittest
-from unittest.mock import patch, MagicMock, mock_open, call
+from unittest.mock import patch, MagicMock, mock_open
 from selenium.common.exceptions import WebDriverException
 from datetime import datetime
 from urllib.parse import urlparse
@@ -71,6 +71,8 @@ class TestSeleniumFuzzer(unittest.TestCase):
         args.fuzz_fields = True
         args.check_dropdowns = False
         args.delay = 1
+        args.devtools = False
+        args.track_state = False
 
         mock_fuzzer_instance = MagicMock()
         mock_fuzzer_class.return_value = mock_fuzzer_instance
@@ -109,7 +111,8 @@ class TestSeleniumFuzzer(unittest.TestCase):
         args.fuzz_fields = False
         args.check_dropdowns = False
         args.delay = 1
-        last_action = "Initialization"  # Initialize to prevent UnboundLocalError
+        args.devtools = False
+        args.track_state = False
 
         mock_create_driver.side_effect = WebDriverException("Driver initialization failed")
 
@@ -117,8 +120,7 @@ class TestSeleniumFuzzer(unittest.TestCase):
             initialize_fuzzer(None, args, mock_logger)
 
         mock_capture_artifacts.assert_called_once()
-        mock_logger.error.assert_called_with("\n!!! An Unexpected Error Occurred: Driver initialization failed\n")
-
+        mock_logger.error.assert_called_with("Unexpected Error: Driver initialization failed")
 
 if __name__ == "__main__":
     unittest.main()
