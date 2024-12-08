@@ -33,7 +33,7 @@ class TestSeleniumFuzzer(unittest.TestCase):
         mock_urlparse.assert_called_with("http://example.com")
         mock_path_join.assert_called()
         mock_logger.setLevel.assert_called_with(logging.DEBUG)
-        mock_logger.addHandler.assert_called()
+        self.assertTrue(mock_logger.addHandler.called)  # Ensure `addHandler` is called
         self.assertEqual(logger, mock_logger)
 
     @patch("main.os.makedirs")
@@ -45,6 +45,7 @@ class TestSeleniumFuzzer(unittest.TestCase):
         mock_driver.get_log.return_value = [
             {"timestamp": 123, "level": "SEVERE", "message": "Error"}
         ]
+        mock_driver.page_source = "<html>Mock Page</html>"  # Mock page source as a string
 
         capture_artifacts_on_error(mock_driver, "run1", "scenario1", "test_action", "test_element")
 
@@ -56,6 +57,7 @@ class TestSeleniumFuzzer(unittest.TestCase):
         handle = mock_file()
         handle.write.assert_any_call("Run ID: run1\nScenario: scenario1\nLast Action: test_action\nLast Element: test_element\nCurrent URL: http://example.com\n\n")
         handle.write.assert_any_call("123 SEVERE Error\n")
+        handle.write.assert_called_with("<html>Mock Page</html>")  # Verify DOM snapshot write
 
     @patch("main.Fuzzer")
     @patch("main.JavaScriptChangeDetector")
@@ -63,6 +65,7 @@ class TestSeleniumFuzzer(unittest.TestCase):
     @patch("builtins.input", return_value="0")
     def test_initialize_fuzzer_fuzz_fields(self, mock_input, mock_generate_payloads, mock_js_change_detector, mock_fuzzer_class):
         mock_driver = MagicMock()
+        mock_driver.page_source = "<html>Mock Page</html>"  # Mock page source
         mock_logger = MagicMock()
         args = MagicMock()
         args.fuzz_fields = True
@@ -116,5 +119,6 @@ class TestSeleniumFuzzer(unittest.TestCase):
         mock_capture_artifacts.assert_called_once()
         mock_logger.error.assert_called_with("\n!!! An Unexpected Error Occurred: Driver initialization failed\n")
 
-    if __name__ == "__main__":
-        unittest.main()
+
+if __name__ == "__main__":
+    unittest.main()
