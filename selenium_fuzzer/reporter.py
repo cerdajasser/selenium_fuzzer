@@ -46,6 +46,11 @@ class ReportGenerator:
                         self.artifact_screenshots.append(f)
 
     def generate_report(self, output_file: str = "report.html"):
+        # Ensure data arrays have valid numbers
+        fields_count = len(self.fuzzed_fields_details)
+        dropdowns_count = len(self.fuzzed_dropdowns_details)
+        errors_count = len(self.errors)
+
         html_content = [
             "<!DOCTYPE html>",
             "<html lang='en'>",
@@ -76,11 +81,11 @@ class ReportGenerator:
             "    data: {",
             "        labels: ['Fuzzed Fields', 'Fuzzed Dropdowns', 'Errors'],",
             "        datasets: [{",
-            f"            data: [{len(self.fuzzed_fields_details)}, {len(self.fuzzed_dropdowns_details)}, {len(self.errors)}],",
+            f"            data: [{fields_count}, {dropdowns_count}, {errors_count}],",
             "            backgroundColor: ['#4CAF50', '#2196F3', '#F44336'],",
             "        }]",
             "    },",
-            "    options: { responsive: true }",
+            "    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }",
             "});",
             "</script>",
             "<h2>Details</h2>",
