@@ -20,13 +20,34 @@ class ReportGenerator:
         self.visited_urls: List[str] = []                  # URLs accessed by Selenium
         self.fuzzer_actions: List[str] = []                # Actions performed by Selenium fuzzer
 
+        # Artifact collections
+        self.screenshots: List[str] = []
+        self.console_logs: List[str] = []
+        self.dom_snapshots: List[str] = []
+
+    def find_artifacts(self, artifact_directory: str):
+        """Locate and categorize artifacts in the specified directory."""
+        print(f"Finding artifacts in directory: {artifact_directory}")
+        if not os.path.exists(artifact_directory):
+            print(f"Artifact directory '{artifact_directory}' not found.")
+            return
+
+        for file_name in os.listdir(artifact_directory):
+            file_path = os.path.join(artifact_directory, file_name)
+            if os.path.isfile(file_path):
+                if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
+                    self.screenshots.append(file_name)
+                elif file_name.lower().endswith(".log"):
+                    self.console_logs.append(file_name)
+                elif file_name.lower().endswith(".html"):
+                    self.dom_snapshots.append(file_name)
+
     def parse_logs(self):
         print("Parsing logs...")
         if not os.path.exists(self.log_directory):
             print(f"Log directory '{self.log_directory}' not found.")
             return
 
-        # Sort log files by modification time and pick the latest one
         log_files = sorted(
             [os.path.join(self.log_directory, f) for f in os.listdir(self.log_directory) if f.endswith(".log")],
             key=os.path.getmtime,
