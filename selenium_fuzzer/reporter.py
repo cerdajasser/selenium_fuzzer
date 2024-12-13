@@ -27,11 +27,32 @@ class ReportGenerator:
         self.artifact_screenshots: List[str] = [] # Additional screenshots stored in artifacts directory
 
     def parse_logs(self):
-        # Implement log parsing logic as before
-        pass
+        # Add debug print statements to verify parsing
+        print("Parsing logs...")
+        if not os.path.exists(self.log_directory):
+            print(f"Log directory '{self.log_directory}' not found.")
+            return
+
+        for log_file in os.listdir(self.log_directory):
+            if log_file.endswith(".log"):
+                print(f"Processing log file: {log_file}")
+                log_path = os.path.join(self.log_directory, log_file)
+                with open(log_path, "r", encoding="utf-8") as file:
+                    for line in file:
+                        print(f"Log line: {line.strip()}")  # Debug each log line
+
+                        # Add logic to populate fuzzed_fields_details, fuzzed_dropdowns_details, errors, etc.
+                        # Example for fields:
+                        if "Payload" in line and "successfully entered into field" in line:
+                            parts = line.split("'")
+                            payload = parts[1]
+                            field_name = parts[3]
+                            url = parts[-1].strip()
+                            self.fuzzed_fields_details.append((field_name, payload, url))
 
     def find_artifacts(self, artifact_directory: str):
         # Screenshots
+        print("Finding artifacts...")  # Debug artifacts discovery
         if os.path.exists(artifact_directory):
             for f in os.listdir(artifact_directory):
                 fp = os.path.join(artifact_directory, f)
@@ -50,6 +71,10 @@ class ReportGenerator:
         fields_count = len(self.fuzzed_fields_details)
         dropdowns_count = len(self.fuzzed_dropdowns_details)
         errors_count = len(self.errors)
+
+        if fields_count == 0 and dropdowns_count == 0 and errors_count == 0:
+            print("No data available to generate a report.")
+            return
 
         html_content = [
             "<!DOCTYPE html>",
