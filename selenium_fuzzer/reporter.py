@@ -30,6 +30,21 @@ class ReportGenerator:
         # Implement log parsing logic as before
         pass
 
+    def find_artifacts(self, artifact_directory: str):
+        # Screenshots
+        if os.path.exists(artifact_directory):
+            for f in os.listdir(artifact_directory):
+                fp = os.path.join(artifact_directory, f)
+                if os.path.isfile(fp):
+                    if f.lower().endswith((".png", ".jpg", ".jpeg")):
+                        self.screenshots.append(f)
+                    elif f.lower().endswith(".log"):
+                        self.console_logs.append(f)
+                    elif f.lower().endswith(".html"):
+                        self.dom_snapshots.append(f)
+                    elif f.lower().endswith((".png", ".jpg", ".jpeg")):
+                        self.artifact_screenshots.append(f)
+
     def generate_report(self, output_file: str = "report.html"):
         html_content = [
             "<!DOCTYPE html>",
