@@ -61,6 +61,11 @@ class ReportGenerator:
                     elif f.lower().endswith((".png", ".jpg", ".jpeg")):
                         self.artifact_screenshots.append(f)
 
+    def truncate_payload(self, payload: str, max_length: int = 50) -> str:
+        if len(payload) > max_length:
+            return payload[:max_length] + "..."
+        return payload
+
     def generate_report(self, output_file: str = "report.html"):
         fields_count = len(self.fuzzed_fields_details)
         dropdowns_count = len(self.fuzzed_dropdowns_details)
@@ -124,7 +129,8 @@ class ReportGenerator:
         ]
 
         for field_name, payload, url in self.fuzzed_fields_details:
-            html_content.append(f"<tr><td>Fuzzed Field</td><td>{field_name}: {payload} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
+            truncated_payload = self.truncate_payload(payload)
+            html_content.append(f"<tr><td>Fuzzed Field</td><td>{field_name}: {truncated_payload} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         for dropdown_name, option, url in self.fuzzed_dropdowns_details:
             html_content.append(f"<tr><td>Fuzzed Dropdown</td><td>{dropdown_name}: {option} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
