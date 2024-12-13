@@ -27,7 +27,6 @@ class ReportGenerator:
         self.artifact_screenshots: List[str] = [] # Additional screenshots stored in artifacts directory
 
     def parse_logs(self):
-        # Add debug print statements to verify parsing
         print("Parsing logs...")
         if not os.path.exists(self.log_directory):
             print(f"Log directory '{self.log_directory}' not found.")
@@ -39,10 +38,7 @@ class ReportGenerator:
                 log_path = os.path.join(self.log_directory, log_file)
                 with open(log_path, "r", encoding="utf-8") as file:
                     for line in file:
-                        print(f"Log line: {line.strip()}")  # Debug each log line
-
-                        # Add logic to populate fuzzed_fields_details, fuzzed_dropdowns_details, errors, etc.
-                        # Example for fields:
+                        print(f"Log line: {line.strip()}")
                         if "Payload" in line and "successfully entered into field" in line:
                             parts = line.split("'")
                             payload = parts[1]
@@ -51,8 +47,7 @@ class ReportGenerator:
                             self.fuzzed_fields_details.append((field_name, payload, url))
 
     def find_artifacts(self, artifact_directory: str):
-        # Screenshots
-        print("Finding artifacts...")  # Debug artifacts discovery
+        print("Finding artifacts...")
         if os.path.exists(artifact_directory):
             for f in os.listdir(artifact_directory):
                 fp = os.path.join(artifact_directory, f)
@@ -67,7 +62,6 @@ class ReportGenerator:
                         self.artifact_screenshots.append(f)
 
     def generate_report(self, output_file: str = "report.html"):
-        # Ensure data arrays have valid numbers
         fields_count = len(self.fuzzed_fields_details)
         dropdowns_count = len(self.fuzzed_dropdowns_details)
         errors_count = len(self.errors)
@@ -90,6 +84,11 @@ class ReportGenerator:
             "header h1 { margin: 0; font-size: 1.5em; }",
             ".container { max-width: 1200px; margin: 20px auto; background: #fff; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }",
             "canvas { max-width: 100%; height: auto; margin: 20px auto; }",
+            "table { width: 100%; border-collapse: collapse; margin-top: 20px; }",
+            "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }",
+            "th { background-color: #f2f2f2; font-weight: bold; }",
+            "tr:nth-child(even) { background-color: #f9f9f9; }",
+            "tr:hover { background-color: #f1f1f1; }",
             "</style>",
             "</head>",
             "<body>",
@@ -114,51 +113,34 @@ class ReportGenerator:
             "});",
             "</script>",
             "<h2>Details</h2>",
-            "<h3>Fuzzed Fields</h3>",
-            "<ul>",
+            "<table>",
+            "<thead>",
+            "<tr>",
+            "<th>Category</th>",
+            "<th>Details</th>",
+            "</tr>",
+            "</thead>",
+            "<tbody>",
         ]
 
         for field_name, payload, url in self.fuzzed_fields_details:
-            html_content.append(f"<li>{field_name}: {payload} (<a href='{url}' target='_blank'>{url}</a>)</li>")
-
-        html_content.extend([
-            "</ul>",
-            "<h3>Fuzzed Dropdowns</h3>",
-            "<ul>",
-        ])
+            html_content.append(f"<tr><td>Fuzzed Field</td><td>{field_name}: {payload} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         for dropdown_name, option, url in self.fuzzed_dropdowns_details:
-            html_content.append(f"<li>{dropdown_name}: {option} (<a href='{url}' target='_blank'>{url}</a>)</li>")
-
-        html_content.extend([
-            "</ul>",
-            "<h3>Errors</h3>",
-            "<ul>",
-        ])
+            html_content.append(f"<tr><td>Fuzzed Dropdown</td><td>{dropdown_name}: {option} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         for timestamp, level, message, url in self.errors:
-            html_content.append(f"<li>[{timestamp}] {level}: {message} (<a href='{url}' target='_blank'>{url}</a>)</li>")
-
-        html_content.extend([
-            "</ul>",
-            "<h3>JS Errors</h3>",
-            "<ul>",
-        ])
+            html_content.append(f"<tr><td>Error</td><td>[{timestamp}] {level}: {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         for timestamp, message, url in self.js_errors:
-            html_content.append(f"<li>[{timestamp}] JS Error: {message} (<a href='{url}' target='_blank'>{url}</a>)</li>")
-
-        html_content.extend([
-            "</ul>",
-            "<h3>JS Warnings</h3>",
-            "<ul>",
-        ])
+            html_content.append(f"<tr><td>JS Error</td><td>[{timestamp}] {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         for timestamp, message, url in self.js_warnings:
-            html_content.append(f"<li>[{timestamp}] JS Warning: {message} (<a href='{url}' target='_blank'>{url}</a>)</li>")
+            html_content.append(f"<tr><td>JS Warning</td><td>[{timestamp}] {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         html_content.extend([
-            "</ul>",
+            "</tbody>",
+            "</table>",
             "</div>",
             "</body>",
             "</html>",
