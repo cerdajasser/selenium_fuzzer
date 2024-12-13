@@ -20,51 +20,35 @@ class ReportGenerator:
         self.visited_urls: List[str] = []                  # URLs accessed by Selenium
         self.fuzzer_actions: List[str] = []                # Actions performed by Selenium fuzzer
 
-        # Artifact collections
-        self.screenshots: List[str] = []
-        self.console_logs: List[str] = []    # List of console log files
-        self.dom_snapshots: List[str] = []   # List of DOM snapshot files
-        self.artifact_screenshots: List[str] = [] # Additional screenshots stored in artifacts directory
-
     def parse_logs(self):
         print("Parsing logs...")
         if not os.path.exists(self.log_directory):
             print(f"Log directory '{self.log_directory}' not found.")
             return
 
-        for log_file in os.listdir(self.log_directory):
-            if log_file.endswith(".log"):
-                print(f"Processing log file: {log_file}")
-                log_path = os.path.join(self.log_directory, log_file)
-                with open(log_path, "r", encoding="utf-8") as file:
-                    for line in file:
-                        print(f"Log line: {line.strip()}")
-                        if "Payload" in line and "successfully entered into field" in line:
-                            parts = line.split("'")
-                            payload = parts[1]
-                            field_name = parts[3]
-                            url = parts[-1].strip()
-                            self.fuzzed_fields_details.append((field_name, payload, url))
+        # Sort log files by modification time and pick the latest one
+        log_files = sorted(
+            [os.path.join(self.log_directory, f) for f in os.listdir(self.log_directory) if f.endswith(".log")],
+            key=os.path.getmtime,
+            reverse=True
+        )
 
-    def find_artifacts(self, artifact_directory: str):
-        print("Finding artifacts...")
-        if os.path.exists(artifact_directory):
-            for f in os.listdir(artifact_directory):
-                fp = os.path.join(artifact_directory, f)
-                if os.path.isfile(fp):
-                    if f.lower().endswith((".png", ".jpg", ".jpeg")):
-                        self.screenshots.append(f)
-                    elif f.lower().endswith(".log"):
-                        self.console_logs.append(f)
-                    elif f.lower().endswith(".html"):
-                        self.dom_snapshots.append(f)
-                    elif f.lower().endswith((".png", ".jpg", ".jpeg")):
-                        self.artifact_screenshots.append(f)
+        if not log_files:
+            print("No log files found.")
+            return
 
-    def truncate_payload(self, payload: str, max_length: int = 50) -> str:
-        if len(payload) > max_length:
-            return payload[:max_length] + "..."
-        return payload
+        latest_log_file = log_files[0]
+        print(f"Processing latest log file: {latest_log_file}")
+
+        with open(latest_log_file, "r", encoding="utf-8") as file:
+            for line in file:
+                print(f"Log line: {line.strip()}")
+                if "Payload" in line and "successfully entered into field" in line:
+                    parts = line.split("'")
+                    payload = html.escape(parts[1])
+                    field_name = html.escape(parts[3])
+                    url = html.escape(parts[-1].strip())
+                    self.fuzzed_fields_details.append((field_name, payload, url))
 
     def generate_report(self, output_file: str = "report.html"):
         fields_count = len(self.fuzzed_fields_details)
@@ -129,20 +113,7 @@ class ReportGenerator:
         ]
 
         for field_name, payload, url in self.fuzzed_fields_details:
-            truncated_payload = self.truncate_payload(payload)
-            html_content.append(f"<tr><td>Fuzzed Field</td><td>{field_name}: {truncated_payload} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
-
-        for dropdown_name, option, url in self.fuzzed_dropdowns_details:
-            html_content.append(f"<tr><td>Fuzzed Dropdown</td><td>{dropdown_name}: {option} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
-
-        for timestamp, level, message, url in self.errors:
-            html_content.append(f"<tr><td>Error</td><td>[{timestamp}] {level}: {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
-
-        for timestamp, message, url in self.js_errors:
-            html_content.append(f"<tr><td>JS Error</td><td>[{timestamp}] {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
-
-        for timestamp, message, url in self.js_warnings:
-            html_content.append(f"<tr><td>JS Warning</td><td>[{timestamp}] {message} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
+            html_content.append(f"<tr><td>Fuzzed Field</td><td>{field_name}: {payload} (<a href='{url}' target='_blank'>{url}</a>)</td></tr>")
 
         html_content.extend([
             "</tbody>",
