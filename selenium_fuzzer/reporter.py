@@ -20,6 +20,28 @@ class ReportGenerator:
         self.visited_urls: List[str] = []                  # URLs accessed by Selenium
         self.fuzzer_actions: List[str] = []                # Actions performed by Selenium fuzzer
 
+        # Artifact collections
+        self.screenshots: List[str] = []
+        self.console_logs: List[str] = []
+        self.dom_snapshots: List[str] = []
+
+    def find_artifacts(self, artifact_directory: str):
+        """Locate and categorize artifacts in the specified directory."""
+        print(f"Finding artifacts in directory: {artifact_directory}")
+        if not os.path.exists(artifact_directory):
+            print(f"Artifact directory '{artifact_directory}' not found.")
+            return
+
+        for file_name in os.listdir(artifact_directory):
+            file_path = os.path.join(artifact_directory, file_name)
+            if os.path.isfile(file_path):
+                if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
+                    self.screenshots.append(html.escape(file_name))
+                elif file_name.lower().endswith(".log"):
+                    self.console_logs.append(html.escape(file_name))
+                elif file_name.lower().endswith(".html"):
+                    self.dom_snapshots.append(html.escape(file_name))
+
     def parse_logs(self):
         """Parse the most recent log file for relevant data."""
         print("Parsing logs...")
@@ -143,18 +165,3 @@ class ReportGenerator:
             print(f"Report generated at: {output_file}")
         except Exception as e:
             print(f"Failed to generate report: {e}")
-
-    def create_placeholder_report(self, output_file: str):
-        """Create a placeholder report when no actionable data exists."""
-        html_content = [
-            "<!DOCTYPE html>",
-            "<html lang='en'>",
-            "<head><title>No Data Report</title></head>",
-            "<body>",
-            "<h1>Fuzzer Report</h1>",
-            "<p>No actionable data was parsed from the logs.</p>",
-            "</body></html>",
-        ]
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(html_content))
-        print(f"Placeholder report generated at: {output_file}")
