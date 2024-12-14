@@ -20,28 +20,6 @@ class ReportGenerator:
         self.visited_urls: List[str] = []                  # URLs accessed by Selenium
         self.fuzzer_actions: List[str] = []                # Actions performed by Selenium fuzzer
 
-        # Artifact collections
-        self.screenshots: List[str] = []
-        self.console_logs: List[str] = []
-        self.dom_snapshots: List[str] = []
-
-    def find_artifacts(self, artifact_directory: str):
-        """Locate and categorize artifacts in the specified directory."""
-        print(f"Finding artifacts in directory: {artifact_directory}")
-        if not os.path.exists(artifact_directory):
-            print(f"Artifact directory '{artifact_directory}' not found.")
-            return
-
-        for file_name in os.listdir(artifact_directory):
-            file_path = os.path.join(artifact_directory, file_name)
-            if os.path.isfile(file_path):
-                if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
-                    self.screenshots.append(html.escape(file_name))
-                elif file_name.lower().endswith(".log"):
-                    self.console_logs.append(html.escape(file_name))
-                elif file_name.lower().endswith(".html"):
-                    self.dom_snapshots.append(html.escape(file_name))
-
     def parse_logs(self):
         """Parse the most recent log file for relevant data."""
         print("Parsing logs...")
@@ -64,23 +42,25 @@ class ReportGenerator:
 
         with open(latest_log_file, "r", encoding="utf-8") as file:
             for line in file:
-                print(f"Log line: {line.strip()}")
-                # Detect fields
+                print(f"Log line: {line.strip()}")  # Debug each line to ensure patterns match
+
+                # Match input fields being fuzzed
                 if "Payload" in line and "successfully entered into field" in line:
                     parts = line.split("'")
                     payload = html.escape(parts[1])
                     field_name = html.escape(parts[3])
                     url = html.escape(parts[-1].strip())
                     self.fuzzed_fields_details.append((field_name, payload, url))
-                    print(f"Added field: {field_name}, Payload: {payload}, URL: {url}")
-                # Detect dropdowns
+                    print(f"Added fuzzed field: Field: {field_name}, Payload: {payload}, URL: {url}")
+
+                # Match dropdown selections
                 elif "Selected option" in line and "from dropdown" in line:
                     parts = line.split("'")
                     option = html.escape(parts[1])
                     dropdown_name = html.escape(parts[3])
                     url = html.escape(parts[-1].strip())
                     self.fuzzed_dropdowns_details.append((dropdown_name, option, url))
-                    print(f"Added dropdown: {dropdown_name}, Option: {option}, URL: {url}")
+                    print(f"Added dropdown: Dropdown: {dropdown_name}, Option: {option}, URL: {url}")
 
     def generate_report(self, output_file: str = "report.html"):
         """Generate a sanitized HTML report."""
@@ -89,8 +69,9 @@ class ReportGenerator:
         errors_count = len(self.errors)
 
         if fields_count == 0 and dropdowns_count == 0 and errors_count == 0:
-            print("No data available to generate a report. Aborting report generation.")
-            return False
+            print("No data available to generate a report. Generating placeholder report.")
+            self.create_placeholder_report(output_file)
+            return
 
         html_content = [
             "<!DOCTYPE html>",
@@ -160,7 +141,20 @@ class ReportGenerator:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(html_content))
             print(f"Report generated at: {output_file}")
-            return True
         except Exception as e:
             print(f"Failed to generate report: {e}")
-            return False
+
+    def create_placeholder_report(self, output_file: str):
+        """Create a placeholder report when no actionable data exists."""
+        html_content = [
+            "<!DOCTYPE html>",
+            "<html lang='en'>",
+            "<head><title>No Data Report</title></head>",
+            "<body>",
+            "<h1>Fuzzer Report</h1>",
+            "<p>No actionable data was parsed from the logs.</p>",
+            "</body></html>",
+        ]
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(html_content))
+        print(f"Placeholder report generated at: {output_file}")
