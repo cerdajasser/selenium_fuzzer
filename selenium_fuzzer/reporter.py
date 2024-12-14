@@ -36,13 +36,26 @@ class ReportGenerator:
             file_path = os.path.join(artifact_directory, file_name)
             if os.path.isfile(file_path):
                 if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
-                    self.screenshots.append(file_name)
+                    self.screenshots.append(html.escape(file_name))
                 elif file_name.lower().endswith(".log"):
-                    self.console_logs.append(file_name)
+                    self.console_logs.append(html.escape(file_name))
                 elif file_name.lower().endswith(".html"):
-                    self.dom_snapshots.append(file_name)
+                    self.dom_snapshots.append(html.escape(file_name))
+
+    def sanitize_url(self, url: str) -> str:
+        """Sanitize and ensure only valid HTTP/HTTPS URLs are included."""
+        if url.startswith("http://") or url.startswith("https://"):
+            return html.escape(url)
+        return "#"
+
+    def truncate_payload(self, payload: str, max_length: int = 50) -> str:
+        """Truncate payloads to avoid excessively long values."""
+        if len(payload) > max_length:
+            return html.escape(payload[:max_length]) + "..."
+        return html.escape(payload)
 
     def parse_logs(self):
+        """Parse the most recent log file for relevant data."""
         print("Parsing logs...")
         if not os.path.exists(self.log_directory):
             print(f"Log directory '{self.log_directory}' not found.")
@@ -64,20 +77,29 @@ class ReportGenerator:
         with open(latest_log_file, "r", encoding="utf-8") as file:
             for line in file:
                 print(f"Log line: {line.strip()}")
+                # Detect fields
                 if "Payload" in line and "successfully entered into field" in line:
                     parts = line.split("'")
-                    payload = html.escape(parts[1])
-                    field_name = html.escape(parts[3])
-                    url = html.escape(parts[-1].strip())
+                    payload = self.truncate_payload(parts[1])
+                    field_name = self.truncate_payload(parts[3])
+                    url = self.sanitize_url(parts[-1].strip())
                     self.fuzzed_fields_details.append((field_name, payload, url))
+                # Detect dropdowns
+                if "Selected option" in line and "from dropdown" in line:
+                    parts = line.split("'")
+                    option = self.truncate_payload(parts[1])
+                    dropdown_name = self.truncate_payload(parts[3])
+                    url = self.sanitize_url(parts[-1].strip())
+                    self.fuzzed_dropdowns_details.append((dropdown_name, option, url))
 
     def generate_report(self, output_file: str = "report.html"):
+        """Generate a sanitized HTML report."""
         fields_count = len(self.fuzzed_fields_details)
         dropdowns_count = len(self.fuzzed_dropdowns_details)
         errors_count = len(self.errors)
 
         if fields_count == 0 and dropdowns_count == 0 and errors_count == 0:
-            print("No data available to generate a report.")
+            print("No data available to generate a report. An empty report will be created.")
             return
 
         html_content = [
