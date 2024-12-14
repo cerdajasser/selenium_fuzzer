@@ -42,18 +42,6 @@ class ReportGenerator:
                 elif file_name.lower().endswith(".html"):
                     self.dom_snapshots.append(html.escape(file_name))
 
-    def sanitize_url(self, url: str) -> str:
-        """Sanitize and ensure only valid HTTP/HTTPS URLs are included."""
-        if url.startswith("http://") or url.startswith("https://"):
-            return html.escape(url)
-        return "#"
-
-    def truncate_payload(self, payload: str, max_length: int = 50) -> str:
-        """Truncate payloads to avoid excessively long values."""
-        if len(payload) > max_length:
-            return html.escape(payload[:max_length]) + "..."
-        return html.escape(payload)
-
     def parse_logs(self):
         """Parse the most recent log file for relevant data."""
         print("Parsing logs...")
@@ -80,16 +68,16 @@ class ReportGenerator:
                 # Detect fields
                 if "Payload" in line and "successfully entered into field" in line:
                     parts = line.split("'")
-                    payload = self.truncate_payload(parts[1])
-                    field_name = self.truncate_payload(parts[3])
-                    url = self.sanitize_url(parts[-1].strip())
+                    payload = html.escape(parts[1])
+                    field_name = html.escape(parts[3])
+                    url = html.escape(parts[-1].strip())
                     self.fuzzed_fields_details.append((field_name, payload, url))
                 # Detect dropdowns
                 if "Selected option" in line and "from dropdown" in line:
                     parts = line.split("'")
-                    option = self.truncate_payload(parts[1])
-                    dropdown_name = self.truncate_payload(parts[3])
-                    url = self.sanitize_url(parts[-1].strip())
+                    option = html.escape(parts[1])
+                    dropdown_name = html.escape(parts[3])
+                    url = html.escape(parts[-1].strip())
                     self.fuzzed_dropdowns_details.append((dropdown_name, option, url))
 
     def generate_report(self, output_file: str = "report.html"):
@@ -99,8 +87,8 @@ class ReportGenerator:
         errors_count = len(self.errors)
 
         if fields_count == 0 and dropdowns_count == 0 and errors_count == 0:
-            print("No data available to generate a report. An empty report will be created.")
-            return
+            print("No data available to generate a report.")
+            return False
 
         html_content = [
             "<!DOCTYPE html>",
@@ -166,7 +154,11 @@ class ReportGenerator:
             "</html>",
         ])
 
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(html_content))
-
-        print(f"Report generated: {output_file}")
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(html_content))
+            print(f"Report generated at: {output_file}")
+            return True
+        except Exception as e:
+            print(f"Failed to generate report: {e}")
+            return False
