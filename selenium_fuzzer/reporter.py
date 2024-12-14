@@ -72,13 +72,15 @@ class ReportGenerator:
                     field_name = html.escape(parts[3])
                     url = html.escape(parts[-1].strip())
                     self.fuzzed_fields_details.append((field_name, payload, url))
+                    print(f"Added field: {field_name}, Payload: {payload}, URL: {url}")
                 # Detect dropdowns
-                if "Selected option" in line and "from dropdown" in line:
+                elif "Selected option" in line and "from dropdown" in line:
                     parts = line.split("'")
                     option = html.escape(parts[1])
                     dropdown_name = html.escape(parts[3])
                     url = html.escape(parts[-1].strip())
                     self.fuzzed_dropdowns_details.append((dropdown_name, option, url))
+                    print(f"Added dropdown: {dropdown_name}, Option: {option}, URL: {url}")
 
     def generate_report(self, output_file: str = "report.html"):
         """Generate a sanitized HTML report."""
@@ -87,7 +89,7 @@ class ReportGenerator:
         errors_count = len(self.errors)
 
         if fields_count == 0 and dropdowns_count == 0 and errors_count == 0:
-            print("No data available to generate a report.")
+            print("No data available to generate a report. Aborting report generation.")
             return False
 
         html_content = [
